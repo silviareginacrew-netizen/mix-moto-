@@ -1,10 +1,9 @@
 {
-  "projectId": "gen-lang-client-0934298543",
-  "appId": "1:515265681400:web:9ca7231afbbca81a4d680d",
-  "apiKey": "AIzaSyDzyrTreksdtIzjk1RXVg3ew-EVhjA4a8E",
-  "authDomain": "gen-lang-client-0934298543.firebaseapp.com",
-  "firestoreDatabaseId": "ai-studio-9d6bfae7-f5f5-43cf-8902-2f35c49f14a3",
-  "storageBucket": "gen-lang-client-0934298543.firebasestorage.app",
-  "messagingSenderId": "515265681400",
+  "projectId": "moto-mix",
+  "appId": "1:533036619782:web:cb06c02e3002cdce978b87",
+  "apiKey": "AIzaSyCNN0nMDZMppeg4l_wVm0P8NSTWg9tiP5k",
+  "authDomain": "moto-mix.firebaseapp.com",
+  "storageBucket": "moto-mix.firebasestorage.app",
+  "messagingSenderId": "533036619782",
   "measurementId": ""
 }
