@@ -28,13 +28,13 @@ export const generateOrcamentoPDF = (orcamento: Orcamento) => {
   doc.setFont('helvetica', 'bold');
   doc.text('MIX MOTO', 105, 22, { align: 'center' });
   
-  // Highlight box for "CHOCOLATE"
+  // Highlight box for "Mix Moto"
   doc.setFillColor(yellowColor[0], yellowColor[1], yellowColor[2]);
-  doc.roundedRect(90, 25, 30, 6, 2, 2, 'F');
+  doc.roundedRect(88, 25, 34, 6, 2, 2, 'F');
   doc.setTextColor(0, 0, 0);
   doc.setFontSize(8);
   doc.setFont('helvetica', 'bold');
-  doc.text('CHOCOLATE', 105, 29.5, { align: 'center' });
+  doc.text('Mix Moto', 105, 29.5, { align: 'center' });
 
   doc.setTextColor(200, 200, 200);
   doc.setFontSize(9);

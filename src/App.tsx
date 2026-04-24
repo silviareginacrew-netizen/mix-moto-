@@ -930,7 +930,7 @@ const Header = () => (
       </div>
       
       <div className="bg-yellow-400 px-4 py-0.5 rounded-full mb-4 transform -rotate-1 shadow-lg shadow-yellow-400/20">
-        <span className="text-[10px] font-black text-black uppercase tracking-[0.25em]">CHOCOLATE</span>
+        <span className="text-[10px] font-black text-black uppercase tracking-[0.25em]">Mix Moto</span>
       </div>
       
       <div className="flex items-center gap-4 text-gray-600">
@@ -1101,7 +1101,7 @@ const LoginView = () => {
                MIX MOTO
              </h1>
              <div className="bg-yellow-400 px-4 py-1 rounded-full transform -rotate-2 shadow-lg -mt-2">
-                <span className="text-xs font-black text-black tracking-widest uppercase">CHOCOLATE</span>
+                <span className="text-xs font-black text-black tracking-widest uppercase">Mix Moto</span>
              </div>
           </div>
           <h2 className="text-[10px] font-black text-gray-600 uppercase tracking-[0.4em] pt-6">Plataforma de Gestão Automotiva</h2>
