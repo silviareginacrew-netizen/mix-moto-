@@ -451,10 +451,10 @@ const ServicosView = ({ servicos, estoque, userId }: { servicos: ServicoRealizad
 
       <div className="space-y-4">
         {servicos.map(s => (
-          <div key={s.id} className="relative bg-card-dark p-4 rounded-2xl border border-gray-800 group">
+          <div key={s.id} className="relative bg-card-dark p-4 rounded-2xl border border-gray-800">
             <button 
               onClick={() => handleDelete(s.id)} 
-              className="absolute top-4 right-4 p-2 bg-red-500/10 text-red-500 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity"
+              className="absolute top-4 right-4 p-2 bg-red-500/10 text-red-500 rounded-lg transition-colors border border-red-500/20"
             >
               <Trash2 className="w-4 h-4" />
             </button>
@@ -671,10 +671,10 @@ const OrcamentosView = ({ orcamentos, estoque, userId }: { orcamentos: Orcamento
 
       <div className="space-y-4">
         {orcamentos.map(o => (
-          <div key={o.id} className="relative bg-card-dark p-4 rounded-2xl border border-gray-800 group">
+          <div key={o.id} className="relative bg-card-dark p-4 rounded-2xl border border-gray-800">
             <button 
               onClick={() => handleDelete(o.id)} 
-              className="absolute top-4 right-4 p-2 bg-red-500/10 text-red-500 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity"
+              className="absolute top-4 right-4 p-2 bg-red-500/10 text-red-500 rounded-lg transition-colors border border-red-500/20"
             >
               <Trash2 className="w-4 h-4" />
             </button>
@@ -926,7 +926,7 @@ const CaixaView = ({ caixa, userId }: { caixa: TransacaoCaixa[], userId: string 
       <div className="space-y-3">
         <h3 className="text-sm font-black text-gray-500 uppercase px-2">Histórico Recente</h3>
         {caixa.slice(0, 15).map(t => (
-          <div key={t.id} className="bg-card-dark p-4 rounded-2xl border border-gray-800 flex justify-between items-center group">
+          <div key={t.id} className="bg-card-dark p-4 rounded-2xl border border-gray-800 flex justify-between items-center">
             <div className="flex items-center gap-3">
               <div className={cn("p-2 rounded-xl", t.tipo === 'entrada' ? "bg-green-500/10 text-green-500" : "bg-red-500/10 text-red-500")}>
                 {t.tipo === 'entrada' ? <TrendingUp className="w-4 h-4" /> : <TrendingDown className="w-4 h-4" />}
@@ -942,7 +942,7 @@ const CaixaView = ({ caixa, userId }: { caixa: TransacaoCaixa[], userId: string 
               </p>
               <button 
                 onClick={() => handleDelete(t.id)} 
-                className="p-1.5 text-red-500 hover:bg-red-500/10 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity"
+                className="p-1.5 text-red-500 hover:bg-red-500/10 rounded-lg border border-red-500/20 transition-colors"
               >
                 <Trash2 className="w-4 h-4" />
               </button>
