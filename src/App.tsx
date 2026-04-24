@@ -917,29 +917,26 @@ const Input = ({ label, ...props }: { label: string } & React.InputHTMLAttribute
 // --- MAIN APP COMPONENT ---
 
 const Header = () => (
-  <div className="relative overflow-hidden bg-[#0b0b0b] pt-8 pb-12 px-6 rounded-b-[3rem] border-b border-gray-800 mb-8">
-    <div className="absolute top-0 left-0 w-full h-full opacity-10 pointer-events-none">
-      <div className="absolute top-[-50%] left-[-20%] w-[100%] h-[150%] bg-gradient-to-br from-purple-600 via-blue-500 to-transparent blur-[120px] rotate-12" />
+  <div className="relative overflow-hidden bg-[#000000] pt-10 pb-12 px-6 rounded-b-[3.5rem] border-b border-gray-900 mb-8 shadow-2xl">
+    <div className="absolute top-0 left-0 w-full h-full opacity-20 pointer-events-none">
+      <div className="absolute top-[-50%] left-[-20%] w-[100%] h-[150%] bg-gradient-to-br from-blue-600/30 via-cyan-500/10 to-transparent blur-[120px] rotate-12" />
     </div>
     
     <div className="relative z-10 flex flex-col items-center text-center">
-      <div className="flex items-center gap-3 mb-2">
-        <div className="p-3 bg-gradient-to-br from-purple-500 to-blue-500 rounded-2xl shadow-lg shadow-purple-500/20">
-          <TrendingUp className="w-6 h-6 text-white" />
-        </div>
-        <h1 className="text-4xl font-display font-black tracking-tighter bg-gradient-to-r from-purple-400 via-blue-400 to-purple-400 bg-clip-text text-transparent animate-pulse whitespace-nowrap uppercase">
+      <div className="mb-4">
+        <h1 className="text-5xl font-display font-black tracking-tighter bg-gradient-to-r from-blue-400 via-cyan-300 to-blue-400 bg-clip-text text-transparent uppercase">
           MIX MOTO
         </h1>
       </div>
       
-      <div className="bg-yellow-400 px-3 py-0.5 rounded-full mb-3 transform -rotate-1 shadow-lg shadow-yellow-400/20">
-        <span className="text-[10px] font-black text-black uppercase tracking-[0.2em]">CHOCOLATE</span>
+      <div className="bg-yellow-400 px-4 py-0.5 rounded-full mb-4 transform -rotate-1 shadow-lg shadow-yellow-400/20">
+        <span className="text-[10px] font-black text-black uppercase tracking-[0.25em]">CHOCOLATE</span>
       </div>
       
-      <div className="flex items-center gap-3 text-gray-500">
-        <div className="w-8 h-px bg-gray-800" />
-        <span className="text-[10px] font-bold tracking-widest uppercase">(18) 99757-1933</span>
-        <div className="w-8 h-px bg-gray-800" />
+      <div className="flex items-center gap-4 text-gray-600">
+        <div className="w-12 h-px bg-gray-800" />
+        <span className="text-[9px] font-black tracking-[0.3em] uppercase opacity-50">(18) 99757-1933</span>
+        <div className="w-12 h-px bg-gray-800" />
       </div>
     </div>
   </div>
@@ -1087,27 +1084,27 @@ const LoginView = () => {
   };
 
   return (
-    <div className="min-h-screen relative flex items-center justify-center p-6 bg-[#0b0b0b] overflow-hidden">
+    <div className="min-h-screen relative flex items-center justify-center p-6 bg-[#000000] overflow-hidden">
       {/* Vaporwave background effects */}
       <div className="absolute top-0 left-0 w-full h-full opacity-30 pointer-events-none">
-        <div className="absolute top-[-20%] left-[-20%] w-[80%] h-[80%] bg-purple-600/30 blur-[120px] rounded-full animate-pulse" />
-        <div className="absolute bottom-[-20%] right-[-20%] w-[80%] h-[80%] bg-blue-600/30 blur-[120px] rounded-full animate-pulse" />
+        <div className="absolute top-[-20%] left-[-20%] w-[80%] h-[80%] bg-blue-600/20 blur-[120px] rounded-full" />
+        <div className="absolute bottom-[-20%] right-[-20%] w-[80%] h-[80%] bg-cyan-600/20 blur-[120px] rounded-full" />
       </div>
 
       <div className="relative z-10 w-full max-w-md space-y-8">
         <div className="text-center">
           <div className="flex flex-col items-center gap-2 mb-8">
-             <div className="p-4 bg-gradient-to-br from-purple-500 to-blue-500 rounded-[2rem] shadow-2xl shadow-purple-500/20 mb-4">
-                <TrendingUp className="w-12 h-12 text-white" />
+             <div className="mb-6">
+                <span className="text-8xl font-display font-black tracking-tighter bg-gradient-to-br from-blue-400 to-cyan-400 bg-clip-text text-transparent">MM</span>
              </div>
-             <h1 className="text-5xl font-display font-black tracking-tighter bg-gradient-to-r from-purple-400 via-blue-400 to-purple-400 bg-clip-text text-transparent uppercase">
+             <h1 className="text-5xl font-display font-black tracking-tighter bg-gradient-to-r from-blue-400 via-cyan-300 to-blue-400 bg-clip-text text-transparent uppercase">
                MIX MOTO
              </h1>
              <div className="bg-yellow-400 px-4 py-1 rounded-full transform -rotate-2 shadow-lg -mt-2">
                 <span className="text-xs font-black text-black tracking-widest uppercase">CHOCOLATE</span>
              </div>
           </div>
-          <h2 className="text-sm font-bold text-gray-500 uppercase tracking-[0.2em] pt-4">Sistema de Gestão Profissional</h2>
+          <h2 className="text-[10px] font-black text-gray-600 uppercase tracking-[0.4em] pt-6">Plataforma de Gestão Automotiva</h2>
         </div>
 
         <div className="bg-card-dark p-8 rounded-3xl border border-gray-800 shadow-2xl">
