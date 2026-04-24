@@ -7,22 +7,40 @@ export const generateOrcamentoPDF = (orcamento: Orcamento) => {
   const doc = new jsPDF();
 
   // Header Colors
-  const brandColor = [0, 153, 255]; // #0099ff
+  const purpleColor = [168, 85, 247]; // #a855f7
+  const blueColor = [59, 130, 246]; // #3b82f6
+  const yellowColor = [250, 204, 21]; // #facc15
   const darkColor = [11, 11, 11]; // #0b0b0b
 
   // Logo / Header Section
   doc.setFillColor(darkColor[0], darkColor[1], darkColor[2]);
-  doc.rect(0, 0, 210, 45, 'F');
+  doc.rect(0, 0, 210, 50, 'F');
   
+  // Decorative lines (vaporwave style)
+  doc.setDrawColor(purpleColor[0], purpleColor[1], purpleColor[2]);
+  doc.setLineWidth(0.5);
+  doc.line(0, 48, 210, 48);
+  doc.setDrawColor(blueColor[0], blueColor[1], blueColor[2]);
+  doc.line(0, 49, 210, 49);
+
   doc.setTextColor(255, 255, 255);
-  doc.setFontSize(28);
+  doc.setFontSize(32);
   doc.setFont('helvetica', 'bold');
-  doc.text('MIX MOTO', 105, 20, { align: 'center' });
+  doc.text('MIX MOTO', 105, 22, { align: 'center' });
   
-  doc.setFontSize(10);
+  // Highlight box for "CHOCOLATE"
+  doc.setFillColor(yellowColor[0], yellowColor[1], yellowColor[2]);
+  doc.roundedRect(90, 25, 30, 6, 2, 2, 'F');
+  doc.setTextColor(0, 0, 0);
+  doc.setFontSize(8);
+  doc.setFont('helvetica', 'bold');
+  doc.text('CHOCOLATE', 105, 29.5, { align: 'center' });
+
+  doc.setTextColor(200, 200, 200);
+  doc.setFontSize(9);
   doc.setFont('helvetica', 'normal');
-  doc.text('ESPECIALISTAS EM DUAS RODAS', 105, 28, { align: 'center' });
-  doc.text('WhatsApp: (00) 00000-0000', 105, 34, { align: 'center' });
+  doc.text('WhatsApp: (18) 99757-1933', 105, 38, { align: 'center' });
+  doc.text('CNPJ: 07.887.543/0001-30', 105, 43, { align: 'center' });
 
   // Client Info Section
   doc.setTextColor(darkColor[0], darkColor[1], darkColor[2]);
@@ -63,7 +81,7 @@ export const generateOrcamentoPDF = (orcamento: Orcamento) => {
         formatCurrency(p.valorUnitario),
         formatCurrency(p.quantidade * p.valorUnitario)
       ]),
-      headStyles: { fillColor: brandColor as any, fontStyle: 'bold' },
+      headStyles: { fillColor: [59, 130, 246] as any, fontStyle: 'bold' },
       theme: 'grid',
       styles: { fontSize: 9 }
     });
@@ -101,7 +119,7 @@ export const generateOrcamentoPDF = (orcamento: Orcamento) => {
     currentY = 20;
   }
 
-  doc.setFillColor(brandColor[0], brandColor[1], brandColor[2]);
+  doc.setFillColor(59, 130, 246);
   doc.rect(130, currentY, 65, 14, 'F');
   doc.setTextColor(255, 255, 255);
   doc.setFontSize(16);
@@ -113,7 +131,7 @@ export const generateOrcamentoPDF = (orcamento: Orcamento) => {
   doc.setFontSize(8);
   doc.setFont('helvetica', 'normal');
   doc.text('Este orçamento tem validade de 5 dias úteis.', 105, 285, { align: 'center' });
-  doc.text('Mix Moto - Soluções completas para sua motocicleta.', 105, 290, { align: 'center' });
+  doc.text('Mix Moto - (18) 99757-1933 - @mixmoto.oficina', 105, 290, { align: 'center' });
 
   return doc;
 };

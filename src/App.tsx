@@ -143,57 +143,65 @@ const DashboardView = ({
 
   return (
     <div className="space-y-6">
-      <h2 className="text-2xl font-display font-bold">Painel de Controle</h2>
       <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
-        <StatCard label="Faturamento Hoje" value={formatCurrency(stats.faturamentoDia)} color="text-brand" />
-        <StatCard label="Serviços Hoje" value={stats.servicosHoje} color="text-white" />
-        <StatCard label="Caixa Atual" value={formatCurrency(stats.saldoCaixa)} color="text-green-500" />
-        <StatCard label="Lucro no Mês" value={formatCurrency(stats.lucroMes)} color="text-brand" />
-        <StatCard label="Total Estoque" value={formatCurrency(stats.valorTotalEstoque)} color="text-gray-400" />
-        <StatCard label="Orçamentos" value={stats.orcamentosPendentes} color="text-white" />
+        <StatCard label="Caixa" value={formatCurrency(stats.saldoCaixa)} color="from-green-500/20 to-green-500/5" text="text-green-500" icon={<Wallet className="w-4 h-4 text-green-500" />} />
+        <StatCard label="Lucro Mês" value={formatCurrency(stats.lucroMes)} color="from-brand/20 to-brand/5" text="text-brand" icon={<TrendingUp className="w-4 h-4 text-brand" />} />
+        <StatCard label="Hoje" value={formatCurrency(stats.faturamentoDia)} color="from-blue-500/20 to-blue-500/5" text="text-blue-400" icon={<LayoutDashboard className="w-4 h-4 text-blue-400" />} />
+        <StatCard label="Serviços" value={stats.servicosHoje} color="from-purple-500/20 to-purple-500/5" text="text-purple-400" icon={<Wrench className="w-4 h-4 text-purple-400" />} />
       </div>
 
       <div className="grid md:grid-cols-2 gap-4">
-        <div className="bg-card-dark p-6 rounded-3xl border border-gray-800">
+        <div className="bg-card-dark p-6 rounded-3xl border border-gray-800 shadow-xl shadow-black/40">
           <h3 className="text-sm font-black uppercase text-gray-500 mb-4 flex items-center gap-2">
             <AlertTriangle className="w-4 h-4 text-orange-500" /> Alerta de Estoque
           </h3>
           <div className="space-y-3">
-            {stats.estoqueBaixoList.slice(0, 3).map(item => (
-              <div key={item.id} className="flex justify-between items-center p-3 bg-black/30 rounded-xl">
-                <div>
-                  <p className="font-medium text-sm">{item.nome}</p>
-                  <p className="text-[10px] text-gray-500">{item.marca}</p>
+            {stats.estoqueBaixoList.length > 0 ? (
+              stats.estoqueBaixoList.slice(0, 3).map(item => (
+                <div key={item.id} className="flex justify-between items-center p-3 bg-black/30 rounded-xl border border-gray-800/30">
+                  <div>
+                    <p className="font-bold text-sm">{item.nome}</p>
+                    <p className="text-[10px] text-gray-500 font-bold uppercase">{item.marca}</p>
+                  </div>
+                  <span className={cn("px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest", item.quantidade === 0 ? "bg-red-500/20 text-red-500" : "bg-orange-500/20 text-orange-500")}>
+                    {item.quantidade} un
+                  </span>
                 </div>
-                <span className={cn("px-2 py-1 rounded-lg text-[10px] font-black uppercase", item.quantidade === 0 ? "bg-red-500/20 text-red-500" : "bg-orange-500/20 text-orange-500")}>
-                  {item.quantidade} un
-                </span>
+              ))
+            ) : (
+              <div className="text-center py-6">
+                <p className="text-gray-600 text-xs font-bold uppercase tracking-widest italic">Tudo em dia no estoque!</p>
               </div>
-            ))}
-            {stats.estoqueBaixoCount === 0 && (
-              <p className="text-gray-500 text-xs italic">Tudo em dia!</p>
             )}
             {stats.estoqueBaixoCount > 3 && (
-              <p className="text-brand text-xs font-bold text-center pt-2">+ {stats.estoqueBaixoCount - 3} itens em alerta</p>
+              <p className="text-brand text-[10px] font-black uppercase tracking-widest text-center pt-2">+ {stats.estoqueBaixoCount - 3} itens em alerta</p>
             )}
           </div>
         </div>
 
-        <div className="bg-card-dark p-6 rounded-3xl border border-gray-800 flex flex-col justify-center items-center text-center">
-           <Package className="w-8 h-8 text-brand mb-2 opacity-20" />
-           <p className="text-gray-500 text-[10px] font-black uppercase">Inventário Atual</p>
-           <p className="text-2xl font-display font-bold">{stats.totalItensEstoque}</p>
-           <p className="text-xs text-gray-400">Peças cadastradas</p>
+        <div className="bg-gradient-to-br from-card-dark to-[#0f0f0f] p-6 rounded-3xl border border-gray-800 flex flex-col justify-center items-center text-center shadow-xl shadow-black/40">
+           <Package className="w-10 h-10 text-brand mb-3 opacity-30" />
+           <p className="text-gray-500 text-[10px] font-black uppercase tracking-widest leading-loose">Inventário Geral</p>
+           <p className="text-3xl font-display font-black text-white">{stats.totalItensEstoque}</p>
+           <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest mt-1">Peças e produtos</p>
         </div>
       </div>
     </div>
   );
 };
 
-const StatCard = ({ label, value, color }: { label: string, value: string | number, color?: string }) => (
-  <div className="bg-card-dark p-4 rounded-2xl border border-gray-800 flex flex-col justify-between h-32">
-    <span className="text-gray-400 text-xs uppercase font-bold tracking-wider">{label}</span>
-    <span className={cn("text-xl font-display font-bold", color)}>{value}</span>
+const StatCard = ({ label, value, color, text, icon }: { label: string, value: string | number, color?: string, text?: string, icon?: React.ReactNode }) => (
+  <div className={cn("bg-card-dark p-4 rounded-[2rem] border border-gray-800 overflow-hidden relative group transition-all", color ? `bg-gradient-to-br ${color}` : "bg-card-dark")}>
+    <div className="relative z-10">
+      <div className="flex items-center gap-2 mb-3">
+        {icon}
+        <span className="text-gray-400 text-[9px] uppercase font-black tracking-widest">{label}</span>
+      </div>
+      <span className={cn("text-lg font-display font-black tracking-tight", text)}>{value}</span>
+    </div>
+    <div className="absolute -right-2 -bottom-2 opacity-5 scale-150 rotate-12 group-hover:rotate-0 transition-all duration-500">
+       {icon}
+    </div>
   </div>
 );
 
@@ -511,6 +519,21 @@ const ServicosView = ({ servicos, estoque, userId }: { servicos: ServicoRealizad
                 <textarea name="servicoRealizado" rows={2} required className="w-full rounded-xl px-4 py-2 text-sm resize-none" placeholder="Ex: O barulho era corrente solta..." />
               </div>
 
+              <div className="bg-black/40 p-4 rounded-2xl border border-gray-800 space-y-1">
+                <div className="flex justify-between text-xs text-gray-500">
+                  <span>Peças Total:</span>
+                  <span>{formatCurrency(selectedPecas.reduce((acc, p) => acc + (p.quantidade * p.valorUnitario), 0))}</span>
+                </div>
+                <div className="flex justify-between text-xs text-gray-500">
+                  <span>Mão de Obra:</span>
+                  <span>{formatCurrency(selectedServicos.reduce((acc, s) => acc + s.valor, 0))}</span>
+                </div>
+                <div className="flex justify-between font-bold text-brand border-t border-gray-800 pt-2 mt-2">
+                  <span>TOTAL GERAL:</span>
+                  <span>{formatCurrency(selectedPecas.reduce((acc, p) => acc + (p.quantidade * p.valorUnitario), 0) + selectedServicos.reduce((acc, s) => acc + s.valor, 0))}</span>
+                </div>
+              </div>
+
               <div className="flex gap-4 pt-4">
                 <button type="button" onClick={() => setIsModalOpen(false)} className="flex-1 py-4 rounded-2xl bg-gray-800 font-bold uppercase text-xs tracking-widest">Cancelar</button>
                 <button type="submit" className="flex-1 py-4 rounded-2xl bg-brand font-bold uppercase text-xs tracking-widest shadow-lg shadow-brand/20">Finalizar Serviço</button>
@@ -565,9 +588,23 @@ const OrcamentosView = ({ orcamentos, estoque, userId }: { orcamentos: Orcamento
     setPecas([...pecas, { nome: item.nome, quantidade: 1, valorUnitario: item.valorVenda }]);
   };
 
+  const addManualPeca = () => {
+    setPecas([...pecas, { nome: '', quantidade: 1, valorUnitario: 0 }]);
+  };
+
   const addManualServico = () => {
     setServicos([...servicos, { descricao: '', valor: 0 }]);
   };
+
+  const totals = useMemo(() => {
+    const subtotalPecas = pecas.reduce((acc, p) => acc + (p.quantidade * p.valorUnitario), 0);
+    const subtotalServicos = servicos.reduce((acc, s) => acc + s.valor, 0);
+    return {
+      pecas: subtotalPecas,
+      servicos: subtotalServicos,
+      total: subtotalPecas + subtotalServicos
+    };
+  }, [pecas, servicos]);
 
   return (
     <div className="space-y-6 pb-20">
@@ -621,26 +658,47 @@ const OrcamentosView = ({ orcamentos, estoque, userId }: { orcamentos: Orcamento
               </div>
 
               <div className="space-y-2">
-                <div className="flex justify-between">
+                <div className="flex justify-between items-center">
                   <label className="text-xs text-gray-500 uppercase font-bold">Peças</label>
+                  <button type="button" onClick={addManualPeca} className="text-brand flex items-center gap-1 text-[10px] font-bold"><Plus className="w-3 h-3" /> ADICIONAR MANUAL</button>
                 </div>
                 <div className="relative mb-2">
                    <Search className="absolute left-3 top-2.5 w-4 h-4 text-gray-500" />
-                   <input type="text" placeholder="Adicionar do estoque..." className="w-full pl-10 pr-4 py-2 text-sm rounded-xl" onChange={(e) => setSearchTerm(e.target.value)} />
+                   <input type="text" placeholder="Puxar do estoque..." className="w-full pl-10 pr-4 py-2 text-sm rounded-xl" onChange={(e) => setSearchTerm(e.target.value)} />
                 </div>
-                <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
-                  {estoque.filter(i => i.nome.toLowerCase().includes(searchTerm.toLowerCase())).map(item => (
-                    <button key={item.id} type="button" onClick={() => addPeca(item)} className="whitespace-nowrap px-3 py-1 bg-black rounded text-xs">
-                      {item.nome}
-                    </button>
-                  ))}
-                </div>
+                {searchTerm && (
+                  <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
+                    {estoque.filter(i => i.nome.toLowerCase().includes(searchTerm.toLowerCase())).map(item => (
+                      <button key={item.id} type="button" onClick={() => { addPeca(item); setSearchTerm(''); }} className="whitespace-nowrap px-3 py-1.5 bg-black rounded-lg text-[10px] border border-gray-800">
+                        {item.nome} ({item.quantidade} un)
+                      </button>
+                    ))}
+                  </div>
+                )}
                 {pecas.map((p, idx) => (
-                  <div key={idx} className="flex gap-2 items-center">
-                    <input value={p.nome} onChange={e => setPecas(pecas.map((pi, iIdx) => iIdx === idx ? { ...pi, nome: e.target.value } : pi))} className="flex-1 rounded-lg px-3 py-1.5 text-sm" />
-                    <input type="number" value={p.quantidade} onChange={e => setPecas(pecas.map((pi, iIdx) => iIdx === idx ? { ...pi, quantidade: Number(e.target.value) } : pi))} className="w-16 rounded-lg px-2 py-1.5 text-sm text-center" />
-                    <input type="number" step="0.01" value={p.valorUnitario} onChange={e => setPecas(pecas.map((pi, iIdx) => iIdx === idx ? { ...pi, valorUnitario: Number(e.target.value) } : pi))} className="w-24 rounded-lg px-2 py-1.5 text-sm" />
-                    <button type="button" onClick={() => setPecas(pecas.filter((_, iIdx) => iIdx !== idx))} className="text-red-500"><X className="w-4 h-4" /></button>
+                  <div key={idx} className="flex gap-2 items-center bg-black/20 p-2 rounded-xl border border-gray-800/50">
+                    <input 
+                      placeholder="Nome da peça" 
+                      value={p.nome} 
+                      onChange={e => setPecas(pecas.map((pi, iIdx) => iIdx === idx ? { ...pi, nome: e.target.value } : pi))} 
+                      className="flex-1 bg-transparent border-0 text-xs focus:ring-0 p-1" 
+                    />
+                    <input 
+                       type="number" 
+                       placeholder="Qt"
+                       value={p.quantidade} 
+                       onChange={e => setPecas(pecas.map((pi, iIdx) => iIdx === idx ? { ...pi, quantidade: Number(e.target.value) } : pi))} 
+                       className="w-12 bg-transparent border-0 text-xs text-center focus:ring-0 p-1 font-bold" 
+                    />
+                    <input 
+                       type="number" 
+                       step="0.01" 
+                       placeholder="R$"
+                       value={p.valorUnitario === 0 ? '' : p.valorUnitario} 
+                       onChange={e => setPecas(pecas.map((pi, iIdx) => iIdx === idx ? { ...pi, valorUnitario: Number(e.target.value) } : pi))} 
+                       className="w-20 bg-transparent border-0 text-xs text-right focus:ring-0 p-1 text-brand font-bold" 
+                    />
+                    <button type="button" onClick={() => setPecas(pecas.filter((_, iIdx) => iIdx !== idx))} className="text-red-500 hover:text-red-400 transition-colors"><X className="w-4 h-4" /></button>
                   </div>
                 ))}
               </div>
@@ -648,20 +706,47 @@ const OrcamentosView = ({ orcamentos, estoque, userId }: { orcamentos: Orcamento
               <div className="space-y-2">
                 <div className="flex justify-between items-center">
                   <label className="text-xs text-gray-500 uppercase font-bold">Mão de Obra</label>
-                  <button type="button" onClick={addManualServico} className="text-brand flex items-center gap-1 text-xs font-bold"><Plus className="w-3 h-3" /> ADICIONAR</button>
+                  <button type="button" onClick={addManualServico} className="text-brand flex items-center gap-1 text-[10px] font-bold"><Plus className="w-3 h-3" /> ADICIONAR SERVIÇO</button>
                 </div>
                 {servicos.map((s, idx) => (
-                  <div key={idx} className="flex gap-2 items-center">
-                    <input placeholder="Descrição" value={s.descricao} onChange={e => setServicos(servicos.map((si, iIdx) => iIdx === idx ? { ...si, descricao: e.target.value } : si))} className="flex-1 rounded-lg px-3 py-1.5 text-sm" />
-                    <input type="number" step="0.01" placeholder="Valor" value={s.valor === 0 ? '' : s.valor} onChange={e => setServicos(servicos.map((si, iIdx) => iIdx === idx ? { ...si, valor: Number(e.target.value) } : si))} className="w-24 rounded-lg px-2 py-1.5 text-sm" />
-                    <button type="button" onClick={() => setServicos(servicos.filter((_, iIdx) => iIdx !== idx))} className="text-red-500"><X className="w-4 h-4" /></button>
+                  <div key={idx} className="flex gap-2 items-center bg-black/20 p-2 rounded-xl border border-gray-800/50">
+                    <input 
+                      placeholder="Descrição do serviço" 
+                      value={s.descricao} 
+                      onChange={e => setServicos(servicos.map((si, iIdx) => iIdx === idx ? { ...si, descricao: e.target.value } : si))} 
+                      className="flex-1 bg-transparent border-0 text-xs focus:ring-0 p-1" 
+                    />
+                    <input 
+                      type="number" 
+                      step="0.01" 
+                      placeholder="R$" 
+                      value={s.valor === 0 ? '' : s.valor} 
+                      onChange={e => setServicos(servicos.map((si, iIdx) => iIdx === idx ? { ...si, valor: Number(e.target.value) } : si))} 
+                      className="w-20 bg-transparent border-0 text-xs text-right focus:ring-0 p-1 text-brand font-bold" 
+                    />
+                    <button type="button" onClick={() => setServicos(servicos.filter((_, iIdx) => iIdx !== idx))} className="text-red-500 hover:text-red-400 transition-colors"><X className="w-4 h-4" /></button>
                   </div>
                 ))}
               </div>
 
+              <div className="bg-black/60 p-4 rounded-2xl border border-gray-800 space-y-2">
+                 <div className="flex justify-between text-[10px] text-gray-500 uppercase font-black tracking-widest">
+                   <span>Subtotal Peças:</span>
+                   <span>{formatCurrency(totals.pecas)}</span>
+                 </div>
+                 <div className="flex justify-between text-[10px] text-gray-500 uppercase font-black tracking-widest">
+                   <span>Subtotal Mão de Obra:</span>
+                   <span>{formatCurrency(totals.servicos)}</span>
+                 </div>
+                 <div className="flex justify-between font-display font-bold text-brand border-t border-gray-800 pt-2 mt-2">
+                   <span className="text-sm">TOTAL GERAL:</span>
+                   <span className="text-lg">{formatCurrency(totals.total)}</span>
+                 </div>
+              </div>
+
               <div className="flex gap-4 pt-4">
-                <button type="button" onClick={() => setIsModalOpen(false)} className="flex-1 py-3 rounded-xl bg-gray-800 font-bold uppercase text-xs tracking-widest">Cancelar</button>
-                <button type="submit" className="flex-1 py-3 rounded-xl bg-brand font-bold uppercase text-xs tracking-widest">Gerar Orçamento</button>
+                <button type="button" onClick={() => setIsModalOpen(false)} className="flex-1 py-4 rounded-2xl bg-gray-800 font-bold uppercase text-xs tracking-widest">Cancelar</button>
+                <button type="submit" className="flex-1 py-4 rounded-2xl bg-brand font-bold uppercase text-xs tracking-widest shadow-lg shadow-brand/20">Gerar Orçamento</button>
               </div>
             </form>
           </motion.div>
@@ -831,6 +916,35 @@ const Input = ({ label, ...props }: { label: string } & React.InputHTMLAttribute
 
 // --- MAIN APP COMPONENT ---
 
+const Header = () => (
+  <div className="relative overflow-hidden bg-[#0b0b0b] pt-8 pb-12 px-6 rounded-b-[3rem] border-b border-gray-800 mb-8">
+    <div className="absolute top-0 left-0 w-full h-full opacity-10 pointer-events-none">
+      <div className="absolute top-[-50%] left-[-20%] w-[100%] h-[150%] bg-gradient-to-br from-purple-600 via-blue-500 to-transparent blur-[120px] rotate-12" />
+    </div>
+    
+    <div className="relative z-10 flex flex-col items-center text-center">
+      <div className="flex items-center gap-3 mb-2">
+        <div className="p-3 bg-gradient-to-br from-purple-500 to-blue-500 rounded-2xl shadow-lg shadow-purple-500/20">
+          <TrendingUp className="w-6 h-6 text-white" />
+        </div>
+        <h1 className="text-4xl font-display font-black tracking-tighter bg-gradient-to-r from-purple-400 via-blue-400 to-purple-400 bg-clip-text text-transparent animate-pulse whitespace-nowrap uppercase">
+          MIX MOTO
+        </h1>
+      </div>
+      
+      <div className="bg-yellow-400 px-3 py-0.5 rounded-full mb-3 transform -rotate-1 shadow-lg shadow-yellow-400/20">
+        <span className="text-[10px] font-black text-black uppercase tracking-[0.2em]">CHOCOLATE</span>
+      </div>
+      
+      <div className="flex items-center gap-3 text-gray-500">
+        <div className="w-8 h-px bg-gray-800" />
+        <span className="text-[10px] font-bold tracking-widest uppercase">(18) 99757-1933</span>
+        <div className="w-8 h-px bg-gray-800" />
+      </div>
+    </div>
+  </div>
+);
+
 export default function App() {
   const [user, setUser] = useState<any>(null);
   const [loading, setLoading] = useState(true);
@@ -887,15 +1001,15 @@ export default function App() {
   return (
     <div className="min-h-screen bg-bg-dark pb-24">
       {/* Header */}
-      <header className="fixed top-0 left-0 right-0 z-40 bg-bg-dark/80 backdrop-blur-md border-b border-gray-800 px-6 py-4 flex justify-between items-center">
-        <h1 className="text-xl font-display font-bold tracking-tighter">MIX <span className="text-brand">MOTO</span></h1>
-        <button onClick={() => signOut(auth)} className="text-gray-500 hover:text-red-500 transition-colors">
+      <Header />
+      <div className="fixed top-4 right-4 z-50">
+        <button onClick={() => signOut(auth)} className="bg-black/40 backdrop-blur-md p-2 rounded-xl text-gray-500 hover:text-red-500 transition-colors border border-gray-800">
           <LogOut className="w-5 h-5" />
         </button>
-      </header>
+      </div>
 
       {/* Content */}
-      <main className="pt-20 px-6 max-w-lg mx-auto">
+      <main className="px-6 max-w-lg mx-auto">
         <AnimatePresence mode="wait">
           <motion.div
             key={activeTab}
@@ -973,14 +1087,27 @@ const LoginView = () => {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-black p-6">
-      <div className="w-full max-w-md space-y-8">
+    <div className="min-h-screen relative flex items-center justify-center p-6 bg-[#0b0b0b] overflow-hidden">
+      {/* Vaporwave background effects */}
+      <div className="absolute top-0 left-0 w-full h-full opacity-30 pointer-events-none">
+        <div className="absolute top-[-20%] left-[-20%] w-[80%] h-[80%] bg-purple-600/30 blur-[120px] rounded-full animate-pulse" />
+        <div className="absolute bottom-[-20%] right-[-20%] w-[80%] h-[80%] bg-blue-600/30 blur-[120px] rounded-full animate-pulse" />
+      </div>
+
+      <div className="relative z-10 w-full max-w-md space-y-8">
         <div className="text-center">
-          <motion.div initial={{ scale: 0.5, rotate: -20 }} animate={{ scale: 1, rotate: 0 }} className="inline-block p-4 rounded-3xl bg-brand/10 mb-4">
-            <Wrench className="w-12 h-12 text-brand" />
-          </motion.div>
-          <h1 className="text-4xl font-display font-bold tracking-tighter">MIX <span className="text-brand">MOTO</span></h1>
-          <p className="text-gray-500 mt-2">Sistema Profissional para Oficina</p>
+          <div className="flex flex-col items-center gap-2 mb-8">
+             <div className="p-4 bg-gradient-to-br from-purple-500 to-blue-500 rounded-[2rem] shadow-2xl shadow-purple-500/20 mb-4">
+                <TrendingUp className="w-12 h-12 text-white" />
+             </div>
+             <h1 className="text-5xl font-display font-black tracking-tighter bg-gradient-to-r from-purple-400 via-blue-400 to-purple-400 bg-clip-text text-transparent uppercase">
+               MIX MOTO
+             </h1>
+             <div className="bg-yellow-400 px-4 py-1 rounded-full transform -rotate-2 shadow-lg -mt-2">
+                <span className="text-xs font-black text-black tracking-widest uppercase">CHOCOLATE</span>
+             </div>
+          </div>
+          <h2 className="text-sm font-bold text-gray-500 uppercase tracking-[0.2em] pt-4">Sistema de Gestão Profissional</h2>
         </div>
 
         <div className="bg-card-dark p-8 rounded-3xl border border-gray-800 shadow-2xl">
