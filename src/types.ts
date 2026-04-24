@@ -15,6 +15,7 @@ export interface PecaUsada {
   nome: string;
   quantidade: number;
   valorUnitario: number;
+  valorCusto?: number; // Store cost at time of sale
 }
 
 export interface ServicoRealizado {
@@ -23,11 +24,11 @@ export interface ServicoRealizado {
   whatsapp: string;
   moto: string;
   placa?: string;
-  servicoRealizado: string;
+  servicoRealizado: string; // Brief description
   pecasUsadas: PecaUsada[];
-  maoDeObra: number;
-  formaPagamento: 'Pix' | 'Dinheiro' | 'Cartão';
+  servicos: MaoDeObraOrcamento[]; // Dynamic labor list
   total: number;
+  formaPagamento: 'Pix' | 'Dinheiro' | 'Cartão';
   createdAt: any;
 }
 

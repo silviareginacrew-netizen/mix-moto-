@@ -33,6 +33,7 @@ import {
   Wallet, 
   LogOut, 
   Plus, 
+  Minus,
   Search, 
   Trash2, 
   Edit2, 
@@ -40,6 +41,8 @@ import {
   Share2,
   ChevronRight,
   AlertTriangle,
+  TrendingUp,
+  TrendingDown,
   Menu,
   X,
   Eye,
@@ -79,6 +82,14 @@ const DashboardView = ({
   today.setHours(0, 0, 0, 0);
 
   const stats = useMemo(() => {
+    // Current date filtering
+    const now = new Date();
+    const startOfWeek = new Date(now);
+    startOfWeek.setDate(now.getDate() - now.getDay());
+    startOfWeek.setHours(0, 0, 0, 0);
+    
+    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+
     const faturamentoDia = servicos
       .filter(s => {
         const d = s.createdAt?.toDate ? s.createdAt.toDate() : new Date(s.createdAt);
@@ -86,50 +97,93 @@ const DashboardView = ({
       })
       .reduce((acc, s) => acc + s.total, 0);
 
+    const faturamentoMes = servicos
+      .filter(s => {
+        const d = s.createdAt?.toDate ? s.createdAt.toDate() : new Date(s.createdAt);
+        return d >= startOfMonth;
+      })
+      .reduce((acc, s) => acc + s.total, 0);
+
+    const lucroMes = servicos
+      .filter(s => {
+        const d = s.createdAt?.toDate ? s.createdAt.toDate() : new Date(s.createdAt);
+        return d >= startOfMonth;
+      })
+      .reduce((acc, s) => {
+        const custoTotalPecas = s.pecasUsadas.reduce((sum, p) => sum + (p.quantidade * (p.valorCusto || p.valorUnitario * 0.7)), 0); 
+        return acc + (s.total - custoTotalPecas);
+      }, 0);
+
     const servicosHoje = servicos.filter(s => {
       const d = s.createdAt?.toDate ? s.createdAt.toDate() : new Date(s.createdAt);
       return d >= today;
     }).length;
 
-    const estoqueBaixo = estoque.filter(i => i.quantidade < 5).length;
+    const totalItensEstoque = estoque.reduce((acc, i) => acc + i.quantidade, 0);
+    const valorTotalEstoque = estoque.reduce((acc, i) => acc + (i.quantidade * (i.valorVenda || 0)), 0);
+    const estoqueBaixoList = estoque.filter(i => i.quantidade < 5);
     
     const saldoCaixa = caixa.reduce((acc, t) => acc + (t.tipo === 'entrada' ? t.valor : -t.valor), 0);
     
     const orcamentosPendentes = orcamentos.length;
 
-    return { faturamentoDia, servicosHoje, estoqueBaixo, saldoCaixa, orcamentosPendentes };
+    return { 
+      faturamentoDia, 
+      faturamentoMes,
+      lucroMes,
+      servicosHoje, 
+      estoqueBaixoCount: estoqueBaixoList.length, 
+      estoqueBaixoList,
+      saldoCaixa, 
+      orcamentosPendentes,
+      totalItensEstoque,
+      valorTotalEstoque
+    };
   }, [estoque, servicos, caixa, orcamentos]);
 
   return (
     <div className="space-y-6">
       <h2 className="text-2xl font-display font-bold">Painel de Controle</h2>
-      <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+      <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
         <StatCard label="Faturamento Hoje" value={formatCurrency(stats.faturamentoDia)} color="text-brand" />
-        <StatCard label="Serviços Hoje" value={stats.servicosHoje} color="text-brand" />
-        <StatCard label="Estoque Baixo" value={stats.estoqueBaixo} color={stats.estoqueBaixo > 0 ? "text-orange-500" : "text-gray-400"} />
-        <StatCard label="Caixa Atual" value={formatCurrency(stats.saldoCaixa)} color="text-brand" />
-        <StatCard label="Orçamentos" value={stats.orcamentosPendentes} color="text-brand" />
+        <StatCard label="Serviços Hoje" value={stats.servicosHoje} color="text-white" />
+        <StatCard label="Caixa Atual" value={formatCurrency(stats.saldoCaixa)} color="text-green-500" />
+        <StatCard label="Lucro no Mês" value={formatCurrency(stats.lucroMes)} color="text-brand" />
+        <StatCard label="Total Estoque" value={formatCurrency(stats.valorTotalEstoque)} color="text-gray-400" />
+        <StatCard label="Orçamentos" value={stats.orcamentosPendentes} color="text-white" />
       </div>
 
-      <div className="bg-card-dark p-6 rounded-2xl border border-gray-800">
-        <h3 className="text-lg font-bold mb-4 flex items-center gap-2">
-          <AlertTriangle className="w-5 h-5 text-orange-500" /> Itens em Alerta (Estoque Baixo)
-        </h3>
-        <div className="space-y-3">
-          {estoque.filter(i => i.quantidade < 5).map(item => (
-            <div key={item.id} className="flex justify-between items-center p-3 bg-black/30 rounded-xl">
-              <div>
-                <p className="font-medium">{item.nome}</p>
-                <p className="text-xs text-gray-500">{item.marca}</p>
+      <div className="grid md:grid-cols-2 gap-4">
+        <div className="bg-card-dark p-6 rounded-3xl border border-gray-800">
+          <h3 className="text-sm font-black uppercase text-gray-500 mb-4 flex items-center gap-2">
+            <AlertTriangle className="w-4 h-4 text-orange-500" /> Alerta de Estoque
+          </h3>
+          <div className="space-y-3">
+            {stats.estoqueBaixoList.slice(0, 3).map(item => (
+              <div key={item.id} className="flex justify-between items-center p-3 bg-black/30 rounded-xl">
+                <div>
+                  <p className="font-medium text-sm">{item.nome}</p>
+                  <p className="text-[10px] text-gray-500">{item.marca}</p>
+                </div>
+                <span className={cn("px-2 py-1 rounded-lg text-[10px] font-black uppercase", item.quantidade === 0 ? "bg-red-500/20 text-red-500" : "bg-orange-500/20 text-orange-500")}>
+                  {item.quantidade} un
+                </span>
               </div>
-              <span className={cn("px-3 py-1 rounded-full text-xs font-bold", item.quantidade === 0 ? "bg-red-500/20 text-red-500" : "bg-orange-500/20 text-orange-500")}>
-                {item.quantidade} un
-              </span>
-            </div>
-          ))}
-          {estoque.filter(i => i.quantidade < 5).length === 0 && (
-            <p className="text-gray-500 text-sm italic">Nenhum item com estoque baixo.</p>
-          )}
+            ))}
+            {stats.estoqueBaixoCount === 0 && (
+              <p className="text-gray-500 text-xs italic">Tudo em dia!</p>
+            )}
+            {stats.estoqueBaixoCount > 3 && (
+              <p className="text-brand text-xs font-bold text-center pt-2">+ {stats.estoqueBaixoCount - 3} itens em alerta</p>
+            )}
+          </div>
+        </div>
+
+        <div className="bg-card-dark p-6 rounded-3xl border border-gray-800 flex flex-col justify-center items-center text-center">
+           <Package className="w-8 h-8 text-brand mb-2 opacity-20" />
+           <p className="text-gray-500 text-[10px] font-black uppercase">Inventário Atual</p>
+           <p className="text-2xl font-display font-bold">{stats.totalItensEstoque}</p>
+           <p className="text-xs text-gray-400">Peças cadastradas</p>
         </div>
       </div>
     </div>
@@ -290,6 +344,7 @@ const EstoqueView = ({ estoque, userId }: { estoque: ItemEstoque[], userId: stri
 const ServicosView = ({ servicos, estoque, userId }: { servicos: ServicoRealizado[], estoque: ItemEstoque[], userId: string }) => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedPecas, setSelectedPecas] = useState<PecaUsada[]>([]);
+  const [selectedServicos, setSelectedServicos] = useState<MaoDeObraOrcamento[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
 
   const handleSave = async (e: React.FormEvent<HTMLFormElement>) => {
@@ -298,19 +353,19 @@ const ServicosView = ({ servicos, estoque, userId }: { servicos: ServicoRealizad
     const data = Object.fromEntries(formData.entries());
     
     const totalPecas = selectedPecas.reduce((acc, p) => acc + (p.quantidade * p.valorUnitario), 0);
-    const maoDeObra = Number(data.maoDeObra);
-    const total = totalPecas + maoDeObra;
+    const totalServicos = selectedServicos.reduce((acc, s) => acc + s.valor, 0);
+    const total = totalPecas + totalServicos;
 
     try {
       // 1. Registrar Serviço
-      const servicoRef = await addDoc(collection(db, `usuarios/${userId}/servicos`), {
+      await addDoc(collection(db, `usuarios/${userId}/servicos`), {
         cliente: data.cliente,
         whatsapp: data.whatsapp,
         moto: data.moto,
         placa: data.placa,
         servicoRealizado: data.servicoRealizado,
         pecasUsadas: selectedPecas,
-        maoDeObra,
+        servicos: selectedServicos,
         formaPagamento: data.formaPagamento,
         total,
         createdAt: serverTimestamp()
@@ -334,7 +389,7 @@ const ServicosView = ({ servicos, estoque, userId }: { servicos: ServicoRealizad
 
       setIsModalOpen(false);
       setSelectedPecas([]);
-      // Close keyboard
+      setSelectedServicos([]);
       (document.activeElement as HTMLElement)?.blur();
     } catch (e) {
       console.error(e);
@@ -346,8 +401,18 @@ const ServicosView = ({ servicos, estoque, userId }: { servicos: ServicoRealizad
     if (existing) {
       setSelectedPecas(selectedPecas.map(p => p.id === item.id ? { ...p, quantidade: p.quantidade + 1 } : p));
     } else {
-      setSelectedPecas([...selectedPecas, { id: item.id, nome: item.nome, quantidade: 1, valorUnitario: item.valorVenda }]);
+      setSelectedPecas([...selectedPecas, { 
+        id: item.id, 
+        nome: item.nome, 
+        quantidade: 1, 
+        valorUnitario: item.valorVenda,
+        valorCusto: item.valorCusto || 0 // Store cost at time of selection
+      }]);
     }
+  };
+
+  const addManualServico = () => {
+    setSelectedServicos([...selectedServicos, { descricao: '', valor: 0 }]);
   };
 
   return (
@@ -367,15 +432,18 @@ const ServicosView = ({ servicos, estoque, userId }: { servicos: ServicoRealizad
                 <p className="font-bold">{s.cliente}</p>
                 <p className="text-xs text-gray-500">{s.moto} • {s.placa}</p>
               </div>
-              <span className="text-brand font-bold">{formatCurrency(s.total)}</span>
+              <div className="text-right">
+                <p className="text-brand font-bold">{formatCurrency(s.total)}</p>
+                <p className="text-[10px] text-gray-500 uppercase font-bold">{s.formaPagamento}</p>
+              </div>
             </div>
-            <div className="flex flex-wrap gap-1 mb-2">
-              <span className="bg-black/50 px-2 py-0.5 rounded text-[10px] text-gray-400 capitalize">{s.formaPagamento}</span>
-              <span className="bg-black/50 px-2 py-0.5 rounded text-[10px] text-gray-400">
-                {formatDate(s.createdAt?.toDate ? s.createdAt.toDate() : s.createdAt)}
-              </span>
+            <div className="text-xs text-gray-400 space-y-1 mt-2">
+               <p className="line-clamp-1 italic">"{s.servicoRealizado}"</p>
+               <div className="flex items-center gap-2">
+                 <span className="bg-black/40 px-2 py-0.5 rounded border border-gray-800">{s.pecasUsadas.length} peças</span>
+                 <span className="bg-black/40 px-2 py-0.5 rounded border border-gray-800">{s.servicos?.length || 0} m. obra</span>
+               </div>
             </div>
-            <p className="text-sm text-gray-300 line-clamp-2">{s.servicoRealizado}</p>
           </div>
         ))}
       </div>
@@ -383,7 +451,7 @@ const ServicosView = ({ servicos, estoque, userId }: { servicos: ServicoRealizad
       {isModalOpen && (
         <div className="fixed inset-0 z-50 overflow-y-auto bg-black/80 backdrop-blur-sm p-4">
           <motion.div initial={{ y: 50, opacity: 0 }} animate={{ y: 0, opacity: 1 }} className="bg-card-dark w-full max-w-2xl mx-auto rounded-3xl border border-gray-800 p-6 min-h-max">
-            <h3 className="text-xl font-bold mb-6">Lançar Novo Serviço</h3>
+            <h3 className="text-xl font-bold mb-6">Registrar Serviço Concluído</h3>
             <form onSubmit={handleSave} className="space-y-6">
               <div className="grid grid-cols-2 gap-4">
                 <Input label="Cliente" name="cliente" required />
@@ -393,69 +461,59 @@ const ServicosView = ({ servicos, estoque, userId }: { servicos: ServicoRealizad
                 <Input label="Moto / Modelo" name="moto" required />
                 <Input label="Placa" name="placa" />
               </div>
+              
               <div className="space-y-2">
-                <label className="text-xs text-gray-500 uppercase font-bold">Adicionar Peças do estoque</label>
-                <div className="relative">
+                <label className="text-xs text-gray-500 uppercase font-bold">Peças Usadas</label>
+                <div className="relative mb-2">
                   <Search className="absolute left-3 top-2.5 w-4 h-4 text-gray-500" />
-                  <input 
-                    type="text" 
-                    placeholder="Filtrar peças..." 
-                    className="w-full pl-10 pr-4 py-2 text-sm rounded-xl"
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                  />
+                  <input type="text" placeholder="Filtrar estoque..." className="w-full pl-10 pr-4 py-2 text-sm rounded-xl" onChange={(e) => setSearchTerm(e.target.value)} />
                 </div>
                 <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
                   {estoque.filter(i => i.nome.toLowerCase().includes(searchTerm.toLowerCase())).map(item => (
-                    <button 
-                      key={item.id} 
-                      type="button" 
-                      onClick={() => addPecaToServico(item)}
-                      className="whitespace-nowrap px-3 py-1.5 bg-black rounded-lg text-xs border border-gray-800 hover:border-brand transition-colors"
-                    >
-                      {item.nome} ({item.quantidade})
+                    <button key={item.id} type="button" onClick={() => addPecaToServico(item)} className="whitespace-nowrap px-3 py-1.5 bg-black rounded-lg text-[10px] border border-gray-800">
+                      {item.nome}
                     </button>
                   ))}
                 </div>
+                {selectedPecas.map(p => (
+                  <div key={p.id} className="flex justify-between items-center text-xs py-2 bg-black/20 px-3 rounded-lg">
+                    <span>{p.nome} (x{p.quantidade})</span>
+                    <button type="button" onClick={() => setSelectedPecas(selectedPecas.filter(sp => sp.id !== p.id))} className="text-red-500"><X className="w-4 h-4" /></button>
+                  </div>
+                ))}
               </div>
 
-              {selectedPecas.length > 0 && (
-                <div className="bg-black/30 rounded-2xl p-4 border border-gray-800/50">
-                  <h4 className="text-xs uppercase font-bold text-gray-500 mb-2">Peças Selecionadas</h4>
-                  {selectedPecas.map(p => (
-                    <div key={p.id} className="flex justify-between items-center text-sm py-1 border-b border-gray-800 last:border-0">
-                      <span>{p.nome} (x{p.quantidade})</span>
-                      <div className="flex items-center gap-3">
-                        <span>{formatCurrency(p.valorUnitario * p.quantidade)}</span>
-                        <button type="button" onClick={() => setSelectedPecas(selectedPecas.filter(sp => sp.id !== p.id))} className="text-red-500"><X className="w-4 h-4" /></button>
-                      </div>
-                    </div>
-                  ))}
+              <div className="space-y-2">
+                <div className="flex justify-between items-center">
+                  <label className="text-xs text-gray-500 uppercase font-bold">Mão de Obra</label>
+                  <button type="button" onClick={addManualServico} className="text-brand flex items-center gap-1 text-[10px] font-bold"><Plus className="w-3 h-3" /> ADICIONAR ITEM</button>
                 </div>
-              )}
-
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="text-xs text-gray-500 uppercase font-bold block mb-1">Mão de Obra (R$)</label>
-                  <input name="maoDeObra" type="number" step="0.01" required className="w-full rounded-xl px-4 py-2" />
-                </div>
-                <div>
-                  <label className="text-xs text-gray-500 uppercase font-bold block mb-1">Pagamento</label>
-                  <select name="formaPagamento" className="w-full rounded-xl px-4 py-2">
-                    <option>Pix</option>
-                    <option>Dinheiro</option>
-                    <option>Cartão</option>
-                  </select>
-                </div>
+                {selectedServicos.map((s, idx) => (
+                  <div key={idx} className="flex gap-2">
+                    <input placeholder="Descrição" value={s.descricao} onChange={e => setSelectedServicos(selectedServicos.map((si, iIdx) => iIdx === idx ? { ...si, descricao: e.target.value } : si))} className="flex-1 rounded-xl px-3 py-2 text-sm" />
+                    <input type="number" step="0.01" placeholder="R$" value={s.valor === 0 ? '' : s.valor} onChange={e => setSelectedServicos(selectedServicos.map((si, iIdx) => iIdx === idx ? { ...si, valor: Number(e.target.value) } : si))} className="w-20 rounded-xl px-3 py-2 text-sm" />
+                    <button type="button" onClick={() => setSelectedServicos(selectedServicos.filter((_, iIdx) => iIdx !== idx))} className="text-red-500"><X className="w-4 h-4" /></button>
+                  </div>
+                ))}
               </div>
 
               <div>
-                <label className="text-xs text-gray-500 uppercase font-bold block mb-1">Serviço Realizado</label>
-                <textarea name="servicoRealizado" rows={3} required className="w-full rounded-xl px-4 py-2 resize-none" />
+                <label className="text-xs text-gray-500 uppercase font-bold block mb-1">Pagamento</label>
+                <select name="formaPagamento" className="w-full rounded-xl px-4 py-2 font-bold">
+                  <option>Pix</option>
+                  <option>Dinheiro</option>
+                  <option>Cartão</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="text-xs text-gray-500 uppercase font-bold block mb-1">Notas Internas</label>
+                <textarea name="servicoRealizado" rows={2} required className="w-full rounded-xl px-4 py-2 text-sm resize-none" placeholder="Ex: O barulho era corrente solta..." />
               </div>
 
               <div className="flex gap-4 pt-4">
-                <button type="button" onClick={() => setIsModalOpen(false)} className="flex-1 py-3 rounded-xl bg-gray-800 font-bold uppercase text-xs tracking-widest">Cancelar</button>
-                <button type="submit" className="flex-1 py-3 rounded-xl bg-brand font-bold uppercase text-xs tracking-widest">Registrar e Finalizar</button>
+                <button type="button" onClick={() => setIsModalOpen(false)} className="flex-1 py-4 rounded-2xl bg-gray-800 font-bold uppercase text-xs tracking-widest">Cancelar</button>
+                <button type="submit" className="flex-1 py-4 rounded-2xl bg-brand font-bold uppercase text-xs tracking-widest shadow-lg shadow-brand/20">Finalizar Serviço</button>
               </div>
             </form>
           </motion.div>
@@ -616,18 +674,38 @@ const OrcamentosView = ({ orcamentos, estoque, userId }: { orcamentos: Orcamento
 // --- CAIXA ---
 const CaixaView = ({ caixa, userId }: { caixa: TransacaoCaixa[], userId: string }) => {
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [transactionType, setTransactionType] = useState<'entrada' | 'saida'>('entrada');
+  const [tipo, setTipo] = useState<'entrada' | 'saída'>('entrada');
 
   const stats = useMemo(() => {
-    const entradas = caixa.filter(t => t.tipo === 'entrada').reduce((acc, t) => acc + t.valor, 0);
-    const saidas = caixa.filter(t => t.tipo === 'saida').reduce((acc, t) => acc + t.valor, 0);
+    const now = new Date();
+    const todayStr = now.toLocaleDateString();
     
-    // Payment methods breakdown
-    const pix = caixa.filter(t => t.formaPagamento === 'Pix' && t.tipo === 'entrada').reduce((acc, t) => acc + t.valor, 0);
-    const dinheiro = caixa.filter(t => t.formaPagamento === 'Dinheiro' && t.tipo === 'entrada').reduce((acc, t) => acc + t.valor, 0);
-    const cartao = caixa.filter(t => t.formaPagamento === 'Cartão' && t.tipo === 'entrada').reduce((acc, t) => acc + t.valor, 0);
+    const startOfWeek = new Date(now);
+    startOfWeek.setDate(now.getDate() - now.getDay());
+    startOfWeek.setHours(0, 0, 0, 0);
 
-    return { current: entradas - saidas, entradas, saidas, pix, dinheiro, cartao };
+    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+
+    const filtradas = caixa.map(t => ({
+      ...t,
+      dateObj: t.data?.toDate ? t.data.toDate() : new Date(t.data)
+    }));
+
+    const hoje = filtradas.filter(t => t.dateObj.toLocaleDateString() === todayStr);
+    const semana = filtradas.filter(t => t.dateObj >= startOfWeek);
+    const mes = filtradas.filter(t => t.dateObj >= startOfMonth);
+
+    const calcSum = (list: any[]) => list.reduce((acc, t) => acc + (t.tipo === 'entrada' ? t.valor : -t.valor), 0);
+    const calcEntradas = (list: any[]) => list.filter(t => t.tipo === 'entrada').reduce((acc, t) => acc + t.valor, 0);
+    const calcSaidas = (list: any[]) => list.filter(t => t.tipo === 'saída' || t.tipo === 'saida').reduce((acc, t) => acc + t.valor, 0);
+
+    return {
+      saldo: calcSum(filtradas),
+      entradasHoje: calcEntradas(hoje),
+      saidasHoje: calcSaidas(hoje),
+      totalSemana: calcSum(semana),
+      totalMes: calcSum(mes)
+    };
   }, [caixa]);
 
   const handleSave = async (e: React.FormEvent<HTMLFormElement>) => {
@@ -637,10 +715,10 @@ const CaixaView = ({ caixa, userId }: { caixa: TransacaoCaixa[], userId: string 
 
     try {
       await addDoc(collection(db, `usuarios/${userId}/caixa`), {
-        tipo: data.tipo,
+        tipo,
         valor: Number(data.valor),
         descricao: data.descricao,
-        formaPagamento: data.formaPagamento,
+        formaPagamento: data.formaPagamento || 'Dinheiro',
         data: serverTimestamp()
       });
       setIsModalOpen(false);
@@ -655,62 +733,59 @@ const CaixaView = ({ caixa, userId }: { caixa: TransacaoCaixa[], userId: string 
       <div className="flex justify-between items-center">
         <h2 className="text-2xl font-display font-bold">Fluxo de Caixa</h2>
         <div className="flex gap-2">
-          <button onClick={() => { setTransactionType('entrada'); setIsModalOpen(true); }} className="bg-green-500 p-2 rounded-xl text-white">
-            <Plus className="w-5 h-5" />
-          </button>
-          <button onClick={() => { setTransactionType('saida'); setIsModalOpen(true); }} className="bg-red-500 p-2 rounded-xl text-white">
-            <Plus className="w-5 h-5 rotate-45" />
-          </button>
+           <button onClick={() => { setTipo('saída'); setIsModalOpen(true); }} className="bg-red-500/10 text-red-500 p-2 rounded-xl border border-red-500/20"><Minus className="w-5 h-5" /></button>
+           <button onClick={() => { setTipo('entrada'); setIsModalOpen(true); }} className="bg-brand p-2 rounded-xl shadow-lg shadow-brand/20"><Plus className="w-5 h-5" /></button>
         </div>
       </div>
 
-      <div className="bg-card-dark p-6 rounded-3xl border border-gray-800 text-center space-y-4">
-        <div>
-          <p className="text-gray-500 text-xs uppercase font-bold tracking-widest">Saldo Disponível</p>
-          <p className="text-4xl font-display font-bold text-brand">{formatCurrency(stats.current)}</p>
+      <div className="grid grid-cols-2 gap-4">
+        <div className="bg-card-dark p-4 rounded-2xl border border-gray-800">
+           <p className="text-[10px] text-gray-500 uppercase font-black">Saldo Total</p>
+           <p className="text-xl font-bold text-brand">{formatCurrency(stats.saldo)}</p>
         </div>
-        
-        <div className="grid grid-cols-3 gap-2 pt-2">
-          <div className="bg-black/30 p-2 rounded-xl">
-            <p className="text-[8px] text-gray-500 uppercase font-black">Pix</p>
-            <p className="text-xs font-bold text-white leading-tight">{formatCurrency(stats.pix)}</p>
-          </div>
-          <div className="bg-black/30 p-2 rounded-xl">
-            <p className="text-[8px] text-gray-500 uppercase font-black">Dinheiro</p>
-            <p className="text-xs font-bold text-white leading-tight">{formatCurrency(stats.dinheiro)}</p>
-          </div>
-          <div className="bg-black/30 p-2 rounded-xl">
-            <p className="text-[8px] text-gray-500 uppercase font-black">Cartão</p>
-            <p className="text-xs font-bold text-white leading-tight">{formatCurrency(stats.cartao)}</p>
-          </div>
+        <div className="bg-card-dark p-4 rounded-2xl border border-gray-800">
+           <p className="text-[10px] text-gray-500 uppercase font-black">Total Mês</p>
+           <p className="text-xl font-bold text-white">{formatCurrency(stats.totalMes)}</p>
         </div>
+      </div>
 
-        <div className="flex justify-center gap-6 pt-4 border-t border-gray-800">
-          <div>
-            <p className="text-[10px] text-gray-500 uppercase font-bold">Total Entradas</p>
-            <p className="text-green-500 font-bold">{formatCurrency(stats.entradas)}</p>
-          </div>
-          <div className="w-px bg-gray-800" />
-          <div>
-            <p className="text-[10px] text-gray-500 uppercase font-bold">Total Saídas</p>
-            <p className="text-red-500 font-bold">{formatCurrency(stats.saidas)}</p>
-          </div>
-        </div>
+      <div className="bg-card-dark p-6 rounded-3xl border border-gray-800">
+         <div className="flex justify-between items-center mb-4">
+            <h3 className="font-bold">Movimentação Hoje</h3>
+            <span className="text-[10px] text-gray-500 font-bold uppercase">{new Date().toLocaleDateString('pt-BR')}</span>
+         </div>
+         <div className="grid grid-cols-2 gap-6">
+            <div>
+               <p className="text-[10px] text-green-500 uppercase font-black">Entradas</p>
+               <p className="text-lg font-bold">{formatCurrency(stats.entradasHoje)}</p>
+            </div>
+            <div className="text-right">
+               <p className="text-[10px] text-red-500 uppercase font-black">Saídas</p>
+               <p className="text-lg font-bold">{formatCurrency(stats.saidasHoje)}</p>
+            </div>
+         </div>
+         <div className="mt-4 pt-4 border-t border-gray-800">
+             <div className="flex justify-between items-center">
+                <p className="text-xs text-gray-400">Total na Semana</p>
+                <p className="text-sm font-bold">{formatCurrency(stats.totalSemana)}</p>
+             </div>
+         </div>
       </div>
 
       <div className="space-y-3">
-        {caixa.map(t => (
-          <div key={t.id} className="bg-card-dark/50 p-4 rounded-2xl border border-gray-800/50 flex justify-between items-center transition-all">
-            <div className="flex gap-3 items-center">
-              <div className={cn("w-10 h-10 rounded-full flex items-center justify-center", t.tipo === 'entrada' ? "bg-green-500/10 text-green-500" : "bg-red-500/10 text-red-500")}>
-                {t.tipo === 'entrada' ? <ChevronRight className="-rotate-90 w-5 h-5" /> : <ChevronRight className="rotate-90 w-5 h-5" />}
+        <h3 className="text-sm font-black text-gray-500 uppercase px-2">Histórico Recente</h3>
+        {caixa.slice(0, 15).map(t => (
+          <div key={t.id} className="bg-card-dark p-4 rounded-2xl border border-gray-800 flex justify-between items-center">
+            <div className="flex items-center gap-3">
+              <div className={cn("p-2 rounded-xl", t.tipo === 'entrada' ? "bg-green-500/10 text-green-500" : "bg-red-500/10 text-red-500")}>
+                {t.tipo === 'entrada' ? <TrendingUp className="w-4 h-4" /> : <TrendingDown className="w-4 h-4" />}
               </div>
               <div>
-                <p className="font-medium text-sm">{t.descricao}</p>
-                <p className="text-[10px] text-gray-500 uppercase font-bold">{t.formaPagamento} • {formatDate(t.data?.toDate ? t.data.toDate() : t.data)}</p>
+                <p className="text-sm font-bold leading-tight">{t.descricao}</p>
+                <p className="text-[10px] text-gray-500">{formatDate(t.data?.toDate ? t.data.toDate() : t.data)} • {t.formaPagamento}</p>
               </div>
             </div>
-            <p className={cn("font-bold", t.tipo === 'entrada' ? "text-green-500" : "text-red-500")}>
+            <p className={cn("font-bold text-sm", t.tipo === 'entrada' ? "text-green-500" : "text-red-500")}>
               {t.tipo === 'entrada' ? '+' : '-'}{formatCurrency(t.valor)}
             </p>
           </div>
@@ -718,35 +793,25 @@ const CaixaView = ({ caixa, userId }: { caixa: TransacaoCaixa[], userId: string 
       </div>
 
       {isModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
-          <motion.div initial={{ scale: 0.9 }} animate={{ scale: 1 }} className="bg-card-dark w-full max-w-md p-6 rounded-3xl border border-gray-800">
-            <div className="flex justify-between items-start mb-6">
-              <h3 className="text-xl font-bold">Lançar {transactionType === 'entrada' ? 'Entrada' : 'Saída'}</h3>
-              <div className={cn("px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest", transactionType === 'entrada' ? "bg-green-500/20 text-green-500" : "bg-red-500/20 text-red-500")}>
-                {transactionType}
-              </div>
-            </div>
+        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm p-4 flex items-center justify-center">
+          <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} className="bg-card-dark w-full max-w-sm rounded-3xl border border-gray-800 p-6">
+            <h3 className="text-xl font-bold mb-4">Lançar {tipo}</h3>
             <form onSubmit={handleSave} className="space-y-4">
-              <input type="hidden" name="tipo" value={transactionType} />
-              <div>
-                <label className="text-xs text-gray-500 uppercase font-bold block mb-1">Valor</label>
-                <input name="valor" type="number" step="0.01" autoFocus required className="w-full rounded-xl px-4 py-3 text-lg font-bold text-brand" />
-              </div>
-              <div>
-                <label className="text-xs text-gray-500 uppercase font-bold block mb-1">Descrição</label>
-                <input name="descricao" required placeholder="Ex: Venda de óleo, Pagamento luz..." className="w-full rounded-xl px-4 py-3" />
-              </div>
+              <Input label="Valor (R$)" name="valor" type="number" step="0.01" required />
+              <Input label="Descrição" name="descricao" required />
               <div>
                 <label className="text-xs text-gray-500 uppercase font-bold block mb-1">Forma de Pagamento</label>
-                <select name="formaPagamento" className="w-full rounded-xl px-4 py-3 font-bold">
+                <select name="formaPagamento" className="w-full rounded-xl px-4 py-2 font-bold">
                   <option>Pix</option>
                   <option>Dinheiro</option>
                   <option>Cartão</option>
                 </select>
               </div>
               <div className="flex gap-4 pt-4">
-                <button type="button" onClick={() => setIsModalOpen(false)} className="flex-1 py-4 rounded-2xl bg-gray-800 font-bold uppercase text-xs tracking-widest">Cancelar</button>
-                <button type="submit" className={cn("flex-1 py-4 rounded-2xl font-bold uppercase text-xs tracking-widest text-white shadow-lg", transactionType === 'entrada' ? "bg-green-600 shadow-green-500/20" : "bg-red-600 shadow-red-500/20")}>Confirmar</button>
+                <button type="button" onClick={() => setIsModalOpen(false)} className="flex-1 py-3 bg-gray-800 rounded-xl font-bold">Cancelar</button>
+                <button type="submit" className={cn("flex-1 py-3 rounded-xl font-bold text-white", tipo === 'entrada' ? "bg-brand" : "bg-red-500")}>
+                  Salvar
+                </button>
               </div>
             </form>
           </motion.div>

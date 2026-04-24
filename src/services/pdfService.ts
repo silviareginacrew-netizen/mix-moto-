@@ -10,77 +10,110 @@ export const generateOrcamentoPDF = (orcamento: Orcamento) => {
   const brandColor = [0, 153, 255]; // #0099ff
   const darkColor = [11, 11, 11]; // #0b0b0b
 
-  // Logo Placeholder / Name
+  // Logo / Header Section
   doc.setFillColor(darkColor[0], darkColor[1], darkColor[2]);
-  doc.rect(0, 0, 210, 40, 'F');
+  doc.rect(0, 0, 210, 45, 'F');
   
   doc.setTextColor(255, 255, 255);
-  doc.setFontSize(24);
+  doc.setFontSize(28);
   doc.setFont('helvetica', 'bold');
   doc.text('MIX MOTO', 105, 20, { align: 'center' });
   
   doc.setFontSize(10);
   doc.setFont('helvetica', 'normal');
-  doc.text('SISTEMA DE GESTÃO DE OFICINA', 105, 28, { align: 'center' });
+  doc.text('ESPECIALISTAS EM DUAS RODAS', 105, 28, { align: 'center' });
+  doc.text('WhatsApp: (00) 00000-0000', 105, 34, { align: 'center' });
 
-  // Client Info
+  // Client Info Section
   doc.setTextColor(darkColor[0], darkColor[1], darkColor[2]);
   doc.setFontSize(14);
   doc.setFont('helvetica', 'bold');
-  doc.text('ORÇAMENTO', 15, 55);
+  doc.text('ORÇAMENTO DE SERVIÇOS', 15, 60);
   
+  doc.setDrawColor(230, 230, 230);
+  doc.line(15, 63, 195, 63);
+
   doc.setFontSize(10);
+  doc.setFont('helvetica', 'bold');
+  doc.text('DADOS DO CLIENTE', 15, 72);
+  
   doc.setFont('helvetica', 'normal');
-  doc.text(`Cliente: ${orcamento.cliente}`, 15, 65);
-  doc.text(`WhatsApp: ${orcamento.whatsapp}`, 15, 70);
-  doc.text(`Moto: ${orcamento.moto}`, 15, 75);
-  doc.text(`Placa: ${orcamento.placa || 'N/A'}`, 15, 80);
+  doc.text(`Cliente: ${orcamento.cliente}`, 15, 78);
+  doc.text(`WhatsApp: ${orcamento.whatsapp}`, 15, 83);
+  doc.text(`Moto: ${orcamento.moto}`, 15, 88);
+  doc.text(`Placa: ${orcamento.placa || 'N/A'}`, 15, 93);
+  
   const dateStr = formatDate(orcamento.createdAt?.toDate ? orcamento.createdAt.toDate() : orcamento.createdAt);
-  doc.text(`Data: ${dateStr}`, 140, 65);
+  doc.text(`Data: ${dateStr}`, 145, 78);
+
+  let currentY = 105;
 
   // Table - Peças
-  let finalY = 90;
+  const subtotalPecas = orcamento.pecas.reduce((acc, p) => acc + (p.quantidade * p.valorUnitario), 0);
   if (orcamento.pecas.length > 0) {
+    doc.setFont('helvetica', 'bold');
+    doc.text('PEÇAS E COMPONENTES', 15, currentY - 3);
+    
     autoTable(doc, {
-      startY: 90,
-      head: [['Peça', 'Qtd', 'V. Unit', 'Subtotal']],
+      startY: currentY,
+      head: [['Peça/Produto', 'Qtd', 'V. Unit', 'Total']],
       body: orcamento.pecas.map(p => [
         p.nome,
         p.quantidade,
         formatCurrency(p.valorUnitario),
         formatCurrency(p.quantidade * p.valorUnitario)
       ]),
-      headStyles: { fillColor: brandColor as any },
-      theme: 'grid'
+      headStyles: { fillColor: brandColor as any, fontStyle: 'bold' },
+      theme: 'grid',
+      styles: { fontSize: 9 }
     });
-    finalY = (doc as any).lastAutoTable.finalY;
+    
+    currentY = (doc as any).lastAutoTable.finalY + 8;
+    doc.setFont('helvetica', 'bold');
+    doc.text(`Subtotal Peças: ${formatCurrency(subtotalPecas)}`, 195, currentY, { align: 'right' });
+    currentY += 12;
   }
 
   // Table - Mão de Obra
+  const subtotalServicos = orcamento.servicos.reduce((acc, s) => acc + s.valor, 0);
   if (orcamento.servicos.length > 0) {
+    doc.setFont('helvetica', 'bold');
+    doc.text('MÃO DE OBRA / SERVIÇOS', 15, currentY - 3);
+
     autoTable(doc, {
-      startY: finalY + 10,
+      startY: currentY,
       head: [['Descrição do Serviço', 'Valor']],
       body: orcamento.servicos.map(s => [s.descricao, formatCurrency(s.valor)]),
-      headStyles: { fillColor: brandColor as any },
-      theme: 'grid'
+      headStyles: { fillColor: [50, 50, 50] as any, fontStyle: 'bold' },
+      theme: 'grid',
+      styles: { fontSize: 9 }
     });
-    finalY = (doc as any).lastAutoTable.finalY;
+    
+    currentY = (doc as any).lastAutoTable.finalY + 8;
+    doc.setFont('helvetica', 'bold');
+    doc.text(`Subtotal Serviços: ${formatCurrency(subtotalServicos)}`, 195, currentY, { align: 'right' });
+    currentY += 15;
   }
 
-  // Total
-  const totalY = finalY + 15;
-  doc.setFillColor(brandColor[0], brandColor[1], brandColor[2]);
-  doc.rect(130, totalY - 8, 65, 12, 'F');
-  doc.setTextColor(255, 255, 255);
-  doc.setFontSize(14);
-  doc.setFont('helvetica', 'bold');
-  doc.text(`TOTAL: ${formatCurrency(orcamento.total)}`, 135, totalY);
+  // Summary / Grand Total box
+  if (currentY > 260) {
+    doc.addPage();
+    currentY = 20;
+  }
 
-  // Footer
+  doc.setFillColor(brandColor[0], brandColor[1], brandColor[2]);
+  doc.rect(130, currentY, 65, 14, 'F');
+  doc.setTextColor(255, 255, 255);
+  doc.setFontSize(16);
+  doc.setFont('helvetica', 'bold');
+  doc.text(`TOTAL: ${formatCurrency(orcamento.total)}`, 135, currentY + 10);
+
+  // Bottom Footer
   doc.setTextColor(150, 150, 150);
   doc.setFontSize(8);
-  doc.text('Obrigado pela preferência! Mix Moto - Especialistas em Duas Rodas.', 105, 285, { align: 'center' });
+  doc.setFont('helvetica', 'normal');
+  doc.text('Este orçamento tem validade de 5 dias úteis.', 105, 285, { align: 'center' });
+  doc.text('Mix Moto - Soluções completas para sua motocicleta.', 105, 290, { align: 'center' });
 
   return doc;
 };
