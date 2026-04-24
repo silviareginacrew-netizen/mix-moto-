@@ -1,0 +1,80 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Helper functions
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    // Default deny
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    match /usuarios/{userId} {
+      allow read, write: if isOwner(userId);
+
+      match /estoque/{itemId} {
+        allow read, list: if isOwner(userId);
+        allow create, update: if isOwner(userId) && isValidEstoque(request.resource.data);
+        allow delete: if isOwner(userId);
+      }
+
+      match /servicos/{servicoId} {
+        allow read, list: if isOwner(userId);
+        allow create: if isOwner(userId) && isValidServico(request.resource.data);
+        allow update, delete: if isOwner(userId);
+      }
+
+      match /orcamentos/{orcamentoId} {
+        allow read, list: if isOwner(userId);
+        allow create, update: if isOwner(userId) && isValidOrcamento(request.resource.data);
+        allow delete: if isOwner(userId);
+      }
+
+      match /caixa/{transacaoId} {
+        allow read, list: if isOwner(userId);
+        allow create: if isOwner(userId) && isValidCaixa(request.resource.data);
+        allow update, delete: if isOwner(userId);
+      }
+    }
+
+    // Validation functions
+    function isValidEstoque(data) {
+      return data.nome is string && data.nome.size() > 0 && data.nome.size() <= 100
+        && (data.codigo == null || (data.codigo is string && data.codigo.size() <= 50))
+        && (data.marca == null || (data.marca is string && data.marca.size() <= 50))
+        && data.quantidade is number
+        && (data.valorCusto == null || data.valorCusto is number)
+        && data.valorVenda is number
+        && (data.categoria == null || (data.categoria is string && data.categoria.size() <= 50));
+    }
+
+    function isValidServico(data) {
+      return data.cliente is string && data.cliente.size() > 0 && data.cliente.size() <= 100
+        && data.moto is string && data.moto.size() <= 100
+        && (data.placa == null || (data.placa is string && data.placa.size() <= 20))
+        && data.total is number 
+        && data.formaPagamento in ['Pix', 'Dinheiro', 'Cartão'];
+    }
+
+    function isValidOrcamento(data) {
+      return data.cliente is string && data.cliente.size() > 0 && data.cliente.size() <= 100
+        && data.moto is string && data.moto.size() <= 100;
+    }
+
+    function isValidCaixa(data) {
+      return data.tipo in ['entrada', 'saida']
+        && data.valor is number
+        && (data.descricao == null || (data.descricao is string && data.descricao.size() <= 200));
+    }
+  }
+}

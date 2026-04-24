@@ -1,0 +1,17 @@
+{
+  "name": "Mix Moto",
+  "short_name": "MixMoto",
+  "description": "Sistema para oficina de motos",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0b0b0b",
+  "theme_color": "#0099ff",
+  "icons": [
+    {
+      "src": "https://img.icons8.com/color/512/motorcycle.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}

@@ -1,0 +1,90 @@
+{
+  "entities": {
+    "Estoque": {
+      "title": "Item de Estoque",
+      "description": "Peça ou produto no inventário da oficina",
+      "type": "object",
+      "properties": {
+        "nome": { "type": "string", "description": "Nome da peça" },
+        "codigo": { "type": "string", "description": "Código da peça" },
+        "marca": { "type": "string", "description": "Marca da peça" },
+        "quantidade": { "type": "number", "description": "Quantidade em estoque" },
+        "valorCusto": { "type": "number", "description": "Valor de custo" },
+        "valorVenda": { "type": "number", "description": "Valor de venda" },
+        "categoria": { "type": "string", "description": "Categoria da peça" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["nome", "quantidade", "valorVenda"]
+    },
+    "Servico": {
+      "title": "Serviço Realizado",
+      "description": "Registro de um serviço concluído",
+      "type": "object",
+      "properties": {
+        "cliente": { "type": "string" },
+        "whatsapp": { "type": "string" },
+        "moto": { "type": "string", "description": "Modelo da moto" },
+        "placa": { "type": "string" },
+        "servicoRealizado": { "type": "string" },
+        "pecasUsadas": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "id": { "type": "string" },
+              "nome": { "type": "string" },
+              "quantidade": { "type": "number" },
+              "valorUnitario": { "type": "number" }
+            }
+          }
+        },
+        "maoDeObra": { "type": "number" },
+        "formaPagamento": { "type": "string", "enum": ["Pix", "Dinheiro", "Cartão"] },
+        "total": { "type": "number" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["cliente", "moto", "total", "formaPagamento"]
+    },
+    "Orcamento": {
+      "title": "Orçamento",
+      "description": "Central de orçamentos para clientes",
+      "type": "object",
+      "properties": {
+        "cliente": { "type": "string" },
+        "whatsapp": { "type": "string" },
+        "moto": { "type": "string" },
+        "placa": { "type": "string" },
+        "pecas": {
+          "type": "array",
+          "items": { "type": "object", "properties": { "nome": { "type": "string" }, "quantidade": { "type": "number" }, "valorUnitario": { "type": "number" } } }
+        },
+        "servicos": {
+          "type": "array",
+          "items": { "type": "object", "properties": { "descricao": { "type": "string" }, "valor": { "type": "number" } } }
+        },
+        "total": { "type": "number" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["cliente", "moto"]
+    },
+    "Caixa": {
+      "title": "Transação de Caixa",
+      "description": "Registro de entrada ou saída de valores",
+      "type": "object",
+      "properties": {
+        "tipo": { "type": "string", "enum": ["entrada", "saida"] },
+        "valor": { "type": "number" },
+        "descricao": { "type": "string" },
+        "formaPagamento": { "type": "string", "enum": ["Pix", "Dinheiro", "Cartão"] },
+        "data": { "type": "string", "format": "date-time" }
+      },
+      "required": ["tipo", "valor", "data"]
+    }
+  },
+  "firestore": {
+    "usuarios/{userId}/estoque": { "schema": "Estoque", "description": "Estoque do usuário" },
+    "usuarios/{userId}/servicos": { "schema": "Servico", "description": "Serviços realizados pelo usuário" },
+    "usuarios/{userId}/orcamentos": { "schema": "Orcamento", "description": "Orçamentos gerados pelo usuário" },
+    "usuarios/{userId}/caixa": { "schema": "Caixa", "description": "Fluxo de caixa do usuário" }
+  }
+}
