@@ -1,6 +1,6 @@
 // Simple Service Worker for PWA
 const CACHE_NAME = 'mix-moto-v1';
-const urlsToCache = ['/'];
+const urlsToCache = ['./'];
 
 self.addEventListener('install', (event) => {
   event.waitUntil(
