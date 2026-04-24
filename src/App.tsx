@@ -390,9 +390,11 @@ const ServicosView = ({ servicos, estoque, userId }: { servicos: ServicoRealizad
 
       // 3. Dar baixa no estoque
       for (const peca of selectedPecas) {
-        await updateDoc(doc(db, `usuarios/${userId}/estoque`, peca.id), {
-          quantidade: increment(-peca.quantidade)
-        });
+        if (!peca.id.startsWith('manual-')) {
+          await updateDoc(doc(db, `usuarios/${userId}/estoque`, peca.id), {
+            quantidade: increment(-peca.quantidade)
+          });
+        }
       }
 
       setIsModalOpen(false);
@@ -419,8 +421,23 @@ const ServicosView = ({ servicos, estoque, userId }: { servicos: ServicoRealizad
     }
   };
 
+  const addManualPeca = () => {
+    setSelectedPecas([...selectedPecas, { 
+      id: `manual-${Date.now()}`, 
+      nome: '', 
+      quantidade: 1, 
+      valorUnitario: 0 
+    }]);
+  };
+
   const addManualServico = () => {
     setSelectedServicos([...selectedServicos, { descricao: '', valor: 0 }]);
+  };
+
+  const handleDelete = async (id: string) => {
+    if (confirm('Excluir este registro de serviço?')) {
+      await deleteDoc(doc(db, `usuarios/${userId}/servicos`, id));
+    }
   };
 
   return (
@@ -434,8 +451,14 @@ const ServicosView = ({ servicos, estoque, userId }: { servicos: ServicoRealizad
 
       <div className="space-y-4">
         {servicos.map(s => (
-          <div key={s.id} className="bg-card-dark p-4 rounded-2xl border border-gray-800">
-            <div className="flex justify-between items-start mb-2">
+          <div key={s.id} className="relative bg-card-dark p-4 rounded-2xl border border-gray-800 group">
+            <button 
+              onClick={() => handleDelete(s.id)} 
+              className="absolute top-4 right-4 p-2 bg-red-500/10 text-red-500 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity"
+            >
+              <Trash2 className="w-4 h-4" />
+            </button>
+            <div className="flex justify-between items-start mb-2 pr-10">
               <div>
                 <p className="font-bold">{s.cliente}</p>
                 <p className="text-xs text-gray-500">{s.moto} • {s.placa}</p>
@@ -471,22 +494,47 @@ const ServicosView = ({ servicos, estoque, userId }: { servicos: ServicoRealizad
               </div>
               
               <div className="space-y-2">
-                <label className="text-xs text-gray-500 uppercase font-bold">Peças Usadas</label>
+                <div className="flex justify-between items-center">
+                  <label className="text-xs text-gray-500 uppercase font-bold">Peças Usadas</label>
+                  <button type="button" onClick={addManualPeca} className="text-brand flex items-center gap-1 text-[10px] font-bold"><Plus className="w-3 h-3" /> ADICIONAR MANUAL</button>
+                </div>
                 <div className="relative mb-2">
                   <Search className="absolute left-3 top-2.5 w-4 h-4 text-gray-500" />
                   <input type="text" placeholder="Filtrar estoque..." className="w-full pl-10 pr-4 py-2 text-sm rounded-xl" onChange={(e) => setSearchTerm(e.target.value)} />
                 </div>
-                <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
-                  {estoque.filter(i => i.nome.toLowerCase().includes(searchTerm.toLowerCase())).map(item => (
-                    <button key={item.id} type="button" onClick={() => addPecaToServico(item)} className="whitespace-nowrap px-3 py-1.5 bg-black rounded-lg text-[10px] border border-gray-800">
-                      {item.nome}
-                    </button>
-                  ))}
-                </div>
-                {selectedPecas.map(p => (
-                  <div key={p.id} className="flex justify-between items-center text-xs py-2 bg-black/20 px-3 rounded-lg">
-                    <span>{p.nome} (x{p.quantidade})</span>
-                    <button type="button" onClick={() => setSelectedPecas(selectedPecas.filter(sp => sp.id !== p.id))} className="text-red-500"><X className="w-4 h-4" /></button>
+                {searchTerm && (
+                  <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
+                    {estoque.filter(i => i.nome.toLowerCase().includes(searchTerm.toLowerCase())).map(item => (
+                      <button key={item.id} type="button" onClick={() => { addPecaToServico(item); setSearchTerm(''); }} className="whitespace-nowrap px-3 py-1.5 bg-black rounded-lg text-[10px] border border-gray-800">
+                        {item.nome} ({item.quantidade} un)
+                      </button>
+                    ))}
+                  </div>
+                )}
+                {selectedPecas.map((p, idx) => (
+                  <div key={idx} className="flex gap-2 items-center bg-black/20 p-2 rounded-xl border border-gray-800/50">
+                    <input 
+                      placeholder="Nome da peça" 
+                      value={p.nome} 
+                      onChange={e => setSelectedPecas(selectedPecas.map((pi, iIdx) => iIdx === idx ? { ...pi, nome: e.target.value } : pi))} 
+                      className="flex-1 bg-transparent border-0 text-xs focus:ring-0 p-1" 
+                    />
+                    <input 
+                       type="number" 
+                       placeholder="Qt"
+                       value={p.quantidade} 
+                       onChange={e => setSelectedPecas(selectedPecas.map((pi, iIdx) => iIdx === idx ? { ...pi, quantidade: Number(e.target.value) } : pi))} 
+                       className="w-12 bg-transparent border-0 text-xs text-center focus:ring-0 p-1 font-bold" 
+                    />
+                    <input 
+                       type="number" 
+                       step="0.01" 
+                       placeholder="R$"
+                       value={p.valorUnitario === 0 ? '' : p.valorUnitario} 
+                       onChange={e => setSelectedPecas(selectedPecas.map((pi, iIdx) => iIdx === idx ? { ...pi, valorUnitario: Number(e.target.value) } : pi))} 
+                       className="w-20 bg-transparent border-0 text-xs text-right focus:ring-0 p-1 text-brand font-bold" 
+                    />
+                    <button type="button" onClick={() => setSelectedPecas(selectedPecas.filter((_, iIdx) => iIdx !== idx))} className="text-red-500 hover:text-red-400 transition-colors p-1"><Trash2 className="w-4 h-4" /></button>
                   </div>
                 ))}
               </div>
@@ -500,7 +548,7 @@ const ServicosView = ({ servicos, estoque, userId }: { servicos: ServicoRealizad
                   <div key={idx} className="flex gap-2">
                     <input placeholder="Descrição" value={s.descricao} onChange={e => setSelectedServicos(selectedServicos.map((si, iIdx) => iIdx === idx ? { ...si, descricao: e.target.value } : si))} className="flex-1 rounded-xl px-3 py-2 text-sm" />
                     <input type="number" step="0.01" placeholder="R$" value={s.valor === 0 ? '' : s.valor} onChange={e => setSelectedServicos(selectedServicos.map((si, iIdx) => iIdx === idx ? { ...si, valor: Number(e.target.value) } : si))} className="w-20 rounded-xl px-3 py-2 text-sm" />
-                    <button type="button" onClick={() => setSelectedServicos(selectedServicos.filter((_, iIdx) => iIdx !== idx))} className="text-red-500"><X className="w-4 h-4" /></button>
+                    <button type="button" onClick={() => setSelectedServicos(selectedServicos.filter((_, iIdx) => iIdx !== idx))} className="text-red-500 p-1"><Trash2 className="w-4 h-4" /></button>
                   </div>
                 ))}
               </div>
@@ -606,6 +654,12 @@ const OrcamentosView = ({ orcamentos, estoque, userId }: { orcamentos: Orcamento
     };
   }, [pecas, servicos]);
 
+  const handleDelete = async (id: string) => {
+    if (confirm('Excluir este orçamento?')) {
+      await deleteDoc(doc(db, `usuarios/${userId}/orcamentos`, id));
+    }
+  };
+
   return (
     <div className="space-y-6 pb-20">
       <div className="flex justify-between items-center">
@@ -617,8 +671,14 @@ const OrcamentosView = ({ orcamentos, estoque, userId }: { orcamentos: Orcamento
 
       <div className="space-y-4">
         {orcamentos.map(o => (
-          <div key={o.id} className="bg-card-dark p-4 rounded-2xl border border-gray-800">
-            <div className="flex justify-between items-start mb-2">
+          <div key={o.id} className="relative bg-card-dark p-4 rounded-2xl border border-gray-800 group">
+            <button 
+              onClick={() => handleDelete(o.id)} 
+              className="absolute top-4 right-4 p-2 bg-red-500/10 text-red-500 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity"
+            >
+              <Trash2 className="w-4 h-4" />
+            </button>
+            <div className="flex justify-between items-start mb-2 pr-10">
               <div>
                 <p className="font-bold">{o.cliente}</p>
                 <p className="text-xs text-gray-500">{o.moto} • {o.placa}</p>
@@ -698,7 +758,7 @@ const OrcamentosView = ({ orcamentos, estoque, userId }: { orcamentos: Orcamento
                        onChange={e => setPecas(pecas.map((pi, iIdx) => iIdx === idx ? { ...pi, valorUnitario: Number(e.target.value) } : pi))} 
                        className="w-20 bg-transparent border-0 text-xs text-right focus:ring-0 p-1 text-brand font-bold" 
                     />
-                    <button type="button" onClick={() => setPecas(pecas.filter((_, iIdx) => iIdx !== idx))} className="text-red-500 hover:text-red-400 transition-colors"><X className="w-4 h-4" /></button>
+                    <button type="button" onClick={() => setPecas(pecas.filter((_, iIdx) => iIdx !== idx))} className="text-red-500 hover:text-red-400 transition-colors p-1"><Trash2 className="w-4 h-4" /></button>
                   </div>
                 ))}
               </div>
@@ -724,7 +784,7 @@ const OrcamentosView = ({ orcamentos, estoque, userId }: { orcamentos: Orcamento
                       onChange={e => setServicos(servicos.map((si, iIdx) => iIdx === idx ? { ...si, valor: Number(e.target.value) } : si))} 
                       className="w-20 bg-transparent border-0 text-xs text-right focus:ring-0 p-1 text-brand font-bold" 
                     />
-                    <button type="button" onClick={() => setServicos(servicos.filter((_, iIdx) => iIdx !== idx))} className="text-red-500 hover:text-red-400 transition-colors"><X className="w-4 h-4" /></button>
+                    <button type="button" onClick={() => setServicos(servicos.filter((_, iIdx) => iIdx !== idx))} className="text-red-500 hover:text-red-400 transition-colors p-1"><Trash2 className="w-4 h-4" /></button>
                   </div>
                 ))}
               </div>
@@ -793,6 +853,12 @@ const CaixaView = ({ caixa, userId }: { caixa: TransacaoCaixa[], userId: string 
     };
   }, [caixa]);
 
+  const handleDelete = async (id: string) => {
+    if (confirm('Excluir este lançamento do caixa?')) {
+      await deleteDoc(doc(db, `usuarios/${userId}/caixa`, id));
+    }
+  };
+
   const handleSave = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const formData = new FormData(e.currentTarget);
@@ -860,7 +926,7 @@ const CaixaView = ({ caixa, userId }: { caixa: TransacaoCaixa[], userId: string 
       <div className="space-y-3">
         <h3 className="text-sm font-black text-gray-500 uppercase px-2">Histórico Recente</h3>
         {caixa.slice(0, 15).map(t => (
-          <div key={t.id} className="bg-card-dark p-4 rounded-2xl border border-gray-800 flex justify-between items-center">
+          <div key={t.id} className="bg-card-dark p-4 rounded-2xl border border-gray-800 flex justify-between items-center group">
             <div className="flex items-center gap-3">
               <div className={cn("p-2 rounded-xl", t.tipo === 'entrada' ? "bg-green-500/10 text-green-500" : "bg-red-500/10 text-red-500")}>
                 {t.tipo === 'entrada' ? <TrendingUp className="w-4 h-4" /> : <TrendingDown className="w-4 h-4" />}
@@ -870,9 +936,17 @@ const CaixaView = ({ caixa, userId }: { caixa: TransacaoCaixa[], userId: string 
                 <p className="text-[10px] text-gray-500">{formatDate(t.data?.toDate ? t.data.toDate() : t.data)} • {t.formaPagamento}</p>
               </div>
             </div>
-            <p className={cn("font-bold text-sm", t.tipo === 'entrada' ? "text-green-500" : "text-red-500")}>
-              {t.tipo === 'entrada' ? '+' : '-'}{formatCurrency(t.valor)}
-            </p>
+            <div className="flex items-center gap-4">
+              <p className={cn("font-bold text-sm", t.tipo === 'entrada' ? "text-green-500" : "text-red-500")}>
+                {t.tipo === 'entrada' ? '+' : '-'}{formatCurrency(t.valor)}
+              </p>
+              <button 
+                onClick={() => handleDelete(t.id)} 
+                className="p-1.5 text-red-500 hover:bg-red-500/10 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity"
+              >
+                <Trash2 className="w-4 h-4" />
+              </button>
+            </div>
           </div>
         ))}
       </div>
