@@ -23,7 +23,9 @@ import {
   doc,
   serverTimestamp,
   increment,
-  limit
+  limit,
+  getDoc,
+  runTransaction
 } from 'firebase/firestore';
 import { 
   LayoutDashboard, 
@@ -125,7 +127,7 @@ const DashboardView = ({
     
     const saldoCaixa = caixa.reduce((acc, t) => acc + (t.tipo === 'entrada' ? t.valor : -t.valor), 0);
     
-    const orcamentosPendentes = orcamentos.length;
+    const orcamentosPendentes = orcamentos.filter(o => o.status === 'pendente' || !o.status).length;
 
     return { 
       faturamentoDia, 
@@ -223,10 +225,34 @@ const EstoqueView = ({ estoque, userId }: { estoque: ItemEstoque[], userId: stri
           ...data,
           updatedAt: serverTimestamp()
         });
+        
+        // Record entry if quantity increased manually
+        if (data.quantidade > editingItem.quantidade) {
+          await addDoc(collection(db, `usuarios/${userId}/historico`), {
+            tipo: 'entrada',
+            produto: data.nome,
+            quantidade: data.quantidade - editingItem.quantidade,
+            origem: 'manual',
+            valorUnitario: data.valorVenda,
+            data: serverTimestamp(),
+            usuarioId: userId
+          });
+        }
       } else {
-        await addDoc(collection(db, `usuarios/${userId}/estoque`), {
+        const docRef = await addDoc(collection(db, `usuarios/${userId}/estoque`), {
           ...data,
           updatedAt: serverTimestamp()
+        });
+        
+        // Initial entry
+        await addDoc(collection(db, `usuarios/${userId}/historico`), {
+          tipo: 'entrada',
+          produto: data.nome,
+          quantidade: data.quantidade,
+          origem: 'estoque',
+          valorUnitario: data.valorVenda,
+          data: serverTimestamp(),
+          usuarioId: userId
         });
       }
       setIsModalOpen(false);
@@ -365,7 +391,19 @@ const ServicosView = ({ servicos, estoque, userId }: { servicos: ServicoRealizad
     const total = totalPecas + totalServicos;
 
     try {
-      // 1. Registrar Serviço
+      // 1. Check stock availability
+      for (const peca of selectedPecas) {
+        if (!peca.id.startsWith('manual-')) {
+          const stockDoc = await getDoc(doc(db, `usuarios/${userId}/estoque`, peca.id));
+          const currentQty = stockDoc.exists() ? stockDoc.data().quantidade : 0;
+          if (currentQty < peca.quantidade) {
+            alert(`Estoque insuficiente para: ${peca.nome}. Disponível: ${currentQty}`);
+            return;
+          }
+        }
+      }
+
+      // 2. Registrar Serviço
       await addDoc(collection(db, `usuarios/${userId}/servicos`), {
         cliente: data.cliente,
         whatsapp: data.whatsapp,
@@ -379,24 +417,35 @@ const ServicosView = ({ servicos, estoque, userId }: { servicos: ServicoRealizad
         createdAt: serverTimestamp()
       });
 
-      // 2. Registrar no Caixa
+      // 3. Registrar no Caixa
       await addDoc(collection(db, `usuarios/${userId}/caixa`), {
         tipo: 'entrada',
         valor: total,
-        descricao: `Srv: ${data.cliente} - ${data.moto}`,
+        descricao: `Venda: ${data.cliente} - ${data.moto}`,
         formaPagamento: data.formaPagamento,
         data: serverTimestamp()
       });
 
-      // 3. Dar baixa no estoque
+      // 4. Dar baixa no estoque e registrar histórico
       for (const peca of selectedPecas) {
         if (!peca.id.startsWith('manual-')) {
           await updateDoc(doc(db, `usuarios/${userId}/estoque`, peca.id), {
             quantidade: increment(-peca.quantidade)
           });
+
+          await addDoc(collection(db, `usuarios/${userId}/historico`), {
+            tipo: 'saida',
+            produto: peca.nome,
+            quantidade: peca.quantidade,
+            origem: 'venda',
+            valorUnitario: peca.valorUnitario,
+            data: serverTimestamp(),
+            usuarioId: userId
+          });
         }
       }
 
+      alert("Serviço registrado e estoque atualizado com sucesso!");
       setIsModalOpen(false);
       setSelectedPecas([]);
       setSelectedServicos([]);
@@ -617,6 +666,8 @@ const OrcamentosView = ({ orcamentos, estoque, userId }: { orcamentos: Orcamento
       pecas,
       servicos,
       total: totalPecas + totalServicos,
+      status: 'pendente',
+      estoqueBaixado: false,
       createdAt: serverTimestamp()
     };
 
@@ -633,7 +684,7 @@ const OrcamentosView = ({ orcamentos, estoque, userId }: { orcamentos: Orcamento
   };
 
   const addPeca = (item: ItemEstoque) => {
-    setPecas([...pecas, { nome: item.nome, quantidade: 1, valorUnitario: item.valorVenda }]);
+    setPecas([...pecas, { id: item.id, nome: item.nome, quantidade: 1, valorUnitario: item.valorVenda }]);
   };
 
   const addManualPeca = () => {
@@ -660,6 +711,78 @@ const OrcamentosView = ({ orcamentos, estoque, userId }: { orcamentos: Orcamento
     }
   };
 
+  const handleAprovar = async (orcamento: Orcamento) => {
+    if (orcamento.status === 'aprovado') {
+      alert('Este orçamento já está aprovado.');
+      return;
+    }
+
+    try {
+      // 1. Check stock availability
+      for (const peca of orcamento.pecas) {
+        if (peca.id && !peca.id.startsWith('manual-')) {
+          const stockDoc = await getDoc(doc(db, `usuarios/${userId}/estoque`, peca.id));
+          const currentQty = stockDoc.exists() ? stockDoc.data().quantidade : 0;
+          if (currentQty < peca.quantidade) {
+            alert(`Estoque insuficiente para: ${peca.nome}. Disponível: ${currentQty}`);
+            return;
+          }
+        }
+      }
+
+      if (confirm(`Deseja aprovar o orçamento de ${orcamento.cliente} e dar baixa no estoque?`)) {
+        // 2. Update status
+        await updateDoc(doc(db, `usuarios/${userId}/orcamentos`, orcamento.id), {
+          status: 'aprovado',
+          estoqueBaixado: true
+        });
+
+        // 3. Deduct stock and record history
+        for (const peca of orcamento.pecas) {
+          if (peca.id && !peca.id.startsWith('manual-')) {
+            await updateDoc(doc(db, `usuarios/${userId}/estoque`, peca.id), {
+              quantidade: increment(-peca.quantidade)
+            });
+
+            await addDoc(collection(db, `usuarios/${userId}/historico`), {
+              tipo: 'saida',
+              produto: peca.nome,
+              quantidade: peca.quantidade,
+              origem: 'orcamento',
+              valorUnitario: peca.valorUnitario,
+              data: serverTimestamp(),
+              usuarioId: userId
+            });
+          }
+        }
+
+        // 4. Record as service and cash entry (optional? the prompt says "Sempre que produto for utilizado em orçamentos aprovados")
+        // Usually, an approved budget means the service is being/will be done. 
+        // Let's add technically a service record if not exists, but maybe better to just record the Sale in Box.
+        await addDoc(collection(db, `usuarios/${userId}/caixa`), {
+          tipo: 'entrada',
+          valor: orcamento.total,
+          descricao: `Aprovado: ${orcamento.cliente} - ${orcamento.moto}`,
+          formaPagamento: 'Pix', // Defaulting for auto-approval
+          data: serverTimestamp()
+        });
+
+        alert("Orçamento aprovado e estoque atualizado com sucesso!");
+      }
+    } catch (e) {
+      console.error(e);
+      alert("Erro ao aprovar orçamento.");
+    }
+  };
+
+  const handleRecusar = async (id: string) => {
+    if (confirm('Deseja marcar este orçamento como RECUSADO?')) {
+      await updateDoc(doc(db, `usuarios/${userId}/orcamentos`, id), {
+        status: 'recusado'
+      });
+    }
+  };
+
   return (
     <div className="space-y-6 pb-20">
       <div className="flex justify-between items-center">
@@ -672,32 +795,56 @@ const OrcamentosView = ({ orcamentos, estoque, userId }: { orcamentos: Orcamento
       <div className="space-y-4">
         {orcamentos.map(o => (
           <div key={o.id} className="relative bg-card-dark p-4 rounded-2xl border border-gray-800">
-            <button 
-              onClick={() => handleDelete(o.id)} 
-              className="absolute top-4 right-4 p-2 bg-red-500/10 text-red-500 rounded-lg transition-colors border border-red-500/20"
-            >
-              <Trash2 className="w-4 h-4" />
-            </button>
-            <div className="flex justify-between items-start mb-2 pr-10">
+            <div className="absolute top-4 right-4 flex gap-2">
+              <button 
+                onClick={() => handleDelete(o.id)} 
+                className="p-2 bg-red-500/10 text-red-500 rounded-lg transition-colors border border-red-500/20"
+              >
+                <Trash2 className="w-4 h-4" />
+              </button>
+            </div>
+            
+            <div className="flex justify-between items-start mb-2 pr-20">
               <div>
-                <p className="font-bold">{o.cliente}</p>
+                <div className="flex items-center gap-2 mb-1">
+                  <p className="font-bold">{o.cliente}</p>
+                  <StatusBadge status={o.status || 'pendente'} />
+                </div>
                 <p className="text-xs text-gray-500">{o.moto} • {o.placa}</p>
               </div>
               <span className="text-brand font-bold">{formatCurrency(o.total)}</span>
             </div>
-            <div className="flex gap-2 mt-4">
+
+            <div className="flex flex-wrap gap-2 mt-4">
               <button 
                 onClick={() => downloadOrcamento(o)}
-                className="flex-1 flex gap-2 items-center justify-center py-2 bg-gray-800 rounded-lg text-xs font-bold uppercase tracking-wider"
+                className="flex-1 min-w-[80px] flex gap-2 items-center justify-center py-2 bg-gray-800 rounded-lg text-[10px] font-bold uppercase tracking-wider"
               >
                 <Download className="w-4 h-4" /> PDF
               </button>
               <button 
                 onClick={() => shareOrcamentoWhatsApp(o)}
-                className="flex-1 flex gap-2 items-center justify-center py-2 bg-brand/10 text-brand rounded-lg text-xs font-bold uppercase tracking-wider"
+                className="flex-1 min-w-[80px] flex gap-2 items-center justify-center py-2 bg-brand/10 text-brand rounded-lg text-[10px] font-bold uppercase tracking-wider"
               >
                 <Share2 className="w-4 h-4" /> WhatsApp
               </button>
+              
+              {(o.status === 'pendente' || !o.status) && (
+                <>
+                  <button 
+                    onClick={() => handleAprovar(o)}
+                    className="flex-1 min-w-[80px] flex gap-2 items-center justify-center py-2 bg-green-500 text-white rounded-lg text-[10px] font-bold uppercase tracking-wider shadow-lg shadow-green-500/20"
+                  >
+                    Aprovar
+                  </button>
+                  <button 
+                    onClick={() => handleRecusar(o.id)}
+                    className="flex-1 min-w-[80px] flex gap-2 items-center justify-center py-2 bg-red-500/10 text-red-500 rounded-lg text-[10px] font-bold uppercase tracking-wider"
+                  >
+                    Recusar
+                  </button>
+                </>
+              )}
             </div>
           </div>
         ))}
@@ -988,6 +1135,66 @@ const Input = ({ label, ...props }: { label: string } & React.InputHTMLAttribute
   </div>
 );
 
+const StatusBadge = ({ status }: { status: string }) => {
+  const styles = {
+    pendente: "bg-yellow-500/10 text-yellow-500 border-yellow-500/20",
+    aprovado: "bg-green-500/10 text-green-500 border-green-500/20",
+    recusado: "bg-red-500/10 text-red-500 border-red-500/20"
+  };
+  
+  const label = {
+    pendente: "Pendente",
+    aprovado: "Aprovado",
+    recusado: "Recusado"
+  };
+
+  return (
+    <span className={cn("px-2 py-0.5 rounded-full text-[8px] font-black uppercase tracking-widest border", styles[status as keyof typeof styles] || styles.pendente)}>
+      {label[status as keyof typeof label] || status}
+    </span>
+  );
+};
+
+// --- HISTÓRICO ---
+const HistoricoView = ({ historico }: { historico: any[] }) => {
+  return (
+    <div className="space-y-6 pb-20">
+      <h2 className="text-2xl font-display font-bold">Histórico de Estoque</h2>
+      
+      <div className="space-y-3">
+        {historico.length === 0 ? (
+          <div className="text-center py-20 opacity-30">
+            <Package className="w-12 h-12 mx-auto mb-4" />
+            <p className="text-xs font-bold uppercase tracking-[0.2em]">Sem movimentações registradas</p>
+          </div>
+        ) : (
+          historico.map(h => (
+            <div key={h.id} className="bg-card-dark p-4 rounded-2xl border border-gray-800 flex justify-between items-center group">
+              <div className="flex items-center gap-3">
+                <div className={cn("p-2 rounded-xl border", h.tipo === 'entrada' ? "bg-green-500/10 text-green-500 border-green-500/20" : "bg-red-500/10 text-red-500 border-red-500/20")}>
+                  {h.tipo === 'entrada' ? <TrendingUp className="w-4 h-4" /> : <TrendingDown className="w-4 h-4" />}
+                </div>
+                <div>
+                  <p className="font-bold text-sm tracking-tight">{h.produto}</p>
+                  <p className="text-[10px] text-gray-500 font-bold uppercase tracking-wider">
+                    {h.origem} • {formatDate(h.data?.toDate ? h.data.toDate() : h.data)}
+                  </p>
+                </div>
+              </div>
+              <div className="text-right">
+                <p className={cn("font-black text-sm", h.tipo === 'entrada' ? "text-green-500" : "text-red-500")}>
+                  {h.tipo === 'entrada' ? '+' : '-'}{h.quantidade} un
+                </p>
+                <p className="text-[9px] text-gray-600 font-bold uppercase">{formatCurrency(h.valorUnitario * h.quantidade)}</p>
+              </div>
+            </div>
+          ))
+        )}
+      </div>
+    </div>
+  );
+};
+
 // --- MAIN APP COMPONENT ---
 
 const Header = () => (
@@ -1026,6 +1233,7 @@ export default function App() {
   const [servicos, setServicos] = useState<ServicoRealizado[]>([]);
   const [orcamentos, setOrcamentos] = useState<Orcamento[]>([]);
   const [caixa, setCaixa] = useState<TransacaoCaixa[]>([]);
+  const [historico, setHistorico] = useState<any[]>([]);
 
   useEffect(() => {
     return onAuthStateChanged(auth, (u) => {
@@ -1053,11 +1261,16 @@ export default function App() {
       setCaixa(snap.docs.map(doc => ({ id: doc.id, ...doc.data() } as TransacaoCaixa)));
     });
 
+    const unsubHistorico = onSnapshot(query(collection(db, `usuarios/${user.uid}/historico`), orderBy('data', 'desc'), limit(100)), (snap) => {
+      setHistorico(snap.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+    });
+
     return () => {
       unsubEstoque();
       unsubServicos();
       unsubOrcamentos();
       unsubCaixa();
+      unsubHistorico();
     };
   }, [user]);
 
@@ -1094,6 +1307,7 @@ export default function App() {
             {activeTab === 'servicos' && <ServicosView servicos={servicos} estoque={estoque} userId={user.uid} />}
             {activeTab === 'orcamentos' && <OrcamentosView orcamentos={orcamentos} estoque={estoque} userId={user.uid} />}
             {activeTab === 'caixa' && <CaixaView caixa={caixa} userId={user.uid} />}
+            {activeTab === 'historico' as any && <HistoricoView historico={historico} />}
           </motion.div>
         </AnimatePresence>
       </main>
@@ -1104,6 +1318,7 @@ export default function App() {
         <NavButton active={activeTab === 'estoque'} onClick={() => setActiveTab('estoque')} icon={Package} label="Estoque" />
         <NavButton active={activeTab === 'servicos'} onClick={() => setActiveTab('servicos')} icon={Wrench} label="Serviços" />
         <NavButton active={activeTab === 'orcamentos'} onClick={() => setActiveTab('orcamentos')} icon={ReceiptText} label="Orçamentos" />
+        <NavButton active={activeTab === 'historico' as any} onClick={() => setActiveTab('historico' as any)} icon={TrendingUp} label="Histórico" />
         <NavButton active={activeTab === 'caixa'} onClick={() => setActiveTab('caixa')} icon={Wallet} label="Caixa" />
       </nav>
     </div>

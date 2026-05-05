@@ -33,9 +33,11 @@ export interface ServicoRealizado {
 }
 
 export interface PecaOrcamento {
+  id?: string;
   nome: string;
   quantidade: number;
   valorUnitario: number;
+  valorCusto?: number;
 }
 
 export interface MaoDeObraOrcamento {
@@ -52,6 +54,8 @@ export interface Orcamento {
   pecas: PecaOrcamento[];
   servicos: MaoDeObraOrcamento[];
   total: number;
+  status: 'pendente' | 'aprovado' | 'recusado';
+  estoqueBaixado?: boolean;
   createdAt: any;
 }
 
@@ -62,6 +66,17 @@ export interface TransacaoCaixa {
   descricao: string;
   formaPagamento: 'Pix' | 'Dinheiro' | 'Cartão';
   data: any;
+}
+
+export interface HistoricoEstoque {
+  id: string;
+  tipo: 'entrada' | 'saida';
+  produto: string;
+  quantidade: number;
+  origem: 'venda' | 'orcamento' | 'manual' | 'estoque';
+  valorUnitario?: number;
+  data: any;
+  usuarioId: string;
 }
 
 export type Tab = 'inicio' | 'estoque' | 'servicos' | 'orcamentos' | 'caixa';
